@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_design_system.dart';
-import '../widgets/splash_background.dart';
-import '../widgets/splash_hero_art.dart';
-import '../widgets/splash_logo.dart';
+import '../../../routes/app_routes.dart';
+import '../widgets/welcome_background.dart';
+import '../widgets/welcome_hero_art.dart';
+import '../widgets/welcome_logo.dart';
 
-class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
+class WelcomeScreen extends StatelessWidget {
+  const WelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return const AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        body: SplashBackground(
+        body: WelcomeBackground(
           child: SafeArea(
             child: Padding(
               padding: EdgeInsets.fromLTRB(
@@ -24,7 +26,7 @@ class SplashScreen extends StatelessWidget {
                 AppSpacing.screenPadding,
                 AppSpacing.section,
               ),
-              child: _SplashContent(),
+              child: _WelcomeContent(),
             ),
           ),
         ),
@@ -33,8 +35,8 @@ class SplashScreen extends StatelessWidget {
   }
 }
 
-class _SplashContent extends StatelessWidget {
-  const _SplashContent();
+class _WelcomeContent extends StatelessWidget {
+  const _WelcomeContent();
 
   @override
   Widget build(BuildContext context) {
@@ -47,13 +49,13 @@ class _SplashContent extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SplashLogo(),
+              const WelcomeLogo(),
               const SizedBox(height: AppSpacing.medium),
               RichText(
                     text: TextSpan(
                       style: AppTypography.bodyRegular.copyWith(
                         color: AppColors.primaryText,
-                        height: AppSplashTokens.taglineLineHeight,
+                        height: AppWelcomeTokens.taglineLineHeight,
                       ),
                       children: const [
                         TextSpan(text: "Can't decide?\n"),
@@ -70,20 +72,17 @@ class _SplashContent extends StatelessWidget {
                   )
                   .animate()
                   .fadeIn(delay: 180.ms, duration: 420.ms)
-                  .slideY(begin: AppSplashTokens.taglineSlideStart),
+                  .slideY(begin: AppWelcomeTokens.taglineSlideStart),
             ],
           ),
         ),
         const SizedBox(height: AppSpacing.large),
-        const SplashHeroArt(),
+        const WelcomeHeroArt(),
         const Spacer(flex: 3),
-        AppButton.primary(label: 'Get Started', onPressed: () {})
-            .animate()
-            .fadeIn(delay: 520.ms, duration: 420.ms)
-            .slideY(
-              begin: AppSplashTokens.ctaSlideStart,
-              curve: Curves.easeOutCubic,
-            ),
+        AppButton.primary(
+          label: 'Get Started',
+          onPressed: () => context.go(AppRoutes.onboarding),
+        ),
       ],
     );
   }

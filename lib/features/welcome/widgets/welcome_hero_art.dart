@@ -4,19 +4,19 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_design_system.dart';
 
-class SplashHeroArt extends StatelessWidget {
-  const SplashHeroArt({super.key});
+class WelcomeHeroArt extends StatelessWidget {
+  const WelcomeHeroArt({super.key});
 
   @override
   Widget build(BuildContext context) {
     return const SizedBox(
-      height: AppSplashTokens.heroHeight,
+      height: AppWelcomeTokens.heroHeight,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          _PositionedAssetSticker(spec: AppSplashTokens.film),
-          _PositionedAssetSticker(spec: AppSplashTokens.popcorn),
-          _PositionedAssetSticker(spec: AppSplashTokens.console),
+          _PositionedAssetSticker(spec: AppWelcomeTokens.film),
+          _PositionedAssetSticker(spec: AppWelcomeTokens.popcorn),
+          _PositionedAssetSticker(spec: AppWelcomeTokens.console),
         ],
       ),
     );
@@ -26,7 +26,7 @@ class SplashHeroArt extends StatelessWidget {
 class _PositionedAssetSticker extends StatelessWidget {
   const _PositionedAssetSticker({required this.spec});
 
-  final SplashAssetSpec spec;
+  final WelcomeAssetSpec spec;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +43,7 @@ class _PositionedAssetSticker extends StatelessWidget {
 class _LoopingAssetSticker extends StatefulWidget {
   const _LoopingAssetSticker({required this.spec});
 
-  final SplashAssetSpec spec;
+  final WelcomeAssetSpec spec;
 
   @override
   State<_LoopingAssetSticker> createState() => _LoopingAssetStickerState();
@@ -78,12 +78,13 @@ class _LoopingAssetStickerState extends State<_LoopingAssetSticker>
         );
 
         return Transform.translate(
-          offset: Offset(0, wave * AppSplashTokens.assetFloatDistance),
+          offset: Offset(0, wave * AppWelcomeTokens.assetFloatDistance),
           child: Transform.rotate(
             angle:
-                widget.spec.angle + (wave * AppSplashTokens.assetRotationDrift),
+                widget.spec.angle +
+                (wave * AppWelcomeTokens.assetRotationDrift),
             child: Transform.scale(
-              scale: 1 + (wave * AppSplashTokens.assetScaleDrift),
+              scale: 1 + (wave * AppWelcomeTokens.assetScaleDrift),
               child: child,
             ),
           ),

@@ -91,6 +91,7 @@ class _AppButtonState extends State<AppButton>
       curve: Curves.easeOut,
       scale: _isPressed && !_isDisabled ? 0.96 : 1,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTapDown: _isDisabled ? null : (_) => _setPressed(true),
         onTapCancel: _isDisabled ? null : () => _setPressed(false),
         onTapUp: _isDisabled ? null : (_) => _setPressed(false),

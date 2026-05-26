@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_design_system.dart';
 
-class SplashBackground extends StatelessWidget {
-  const SplashBackground({super.key, required this.child});
+class WelcomeBackground extends StatelessWidget {
+  const WelcomeBackground({super.key, required this.child});
 
   final Widget child;
 
@@ -12,7 +12,7 @@ class SplashBackground extends StatelessWidget {
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: AppColors.primaryBackground,
-        gradient: AppSplashTokens.backgroundGradient,
+        gradient: AppWelcomeTokens.backgroundGradient,
       ),
       child: Stack(
         fit: StackFit.expand,
@@ -45,17 +45,17 @@ class _AmbientGlow extends StatelessWidget {
       alignment: alignment,
       child: IgnorePointer(
         child: Container(
-          width: AppSplashTokens.ambientGlowSize,
-          height: AppSplashTokens.ambientGlowSize,
+          width: AppWelcomeTokens.ambientGlowSize,
+          height: AppWelcomeTokens.ambientGlowSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
                 color: color.withValues(
-                  alpha: AppSplashTokens.ambientGlowOpacity,
+                  alpha: AppWelcomeTokens.ambientGlowOpacity,
                 ),
-                blurRadius: AppSplashTokens.ambientGlowBlur,
-                spreadRadius: AppSplashTokens.ambientGlowSpread,
+                blurRadius: AppWelcomeTokens.ambientGlowBlur,
+                spreadRadius: AppWelcomeTokens.ambientGlowSpread,
               ),
             ],
           ),
@@ -79,10 +79,10 @@ class _StarField extends StatelessWidget {
 class _StarFieldPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    for (final star in AppSplashTokens.stars) {
+    for (final star in AppWelcomeTokens.stars) {
       final paint = Paint()
-        ..color = star.color.withValues(alpha: AppSplashTokens.starOpacity)
-        ..strokeWidth = AppSplashTokens.starStrokeWidth
+        ..color = star.color.withValues(alpha: AppWelcomeTokens.starOpacity)
+        ..strokeWidth = AppWelcomeTokens.starStrokeWidth
         ..strokeCap = StrokeCap.round;
       final center = Offset(size.width * star.x, size.height * star.y);
       final radius = star.radius;

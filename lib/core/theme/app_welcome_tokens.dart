@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-abstract final class AppSplashTokens {
+abstract final class AppWelcomeTokens {
   static const double logoFontSize = 76;
   static const double logoLineHeight = 1;
   static const double logoLetterSpacing = -3.6;
@@ -15,14 +15,13 @@ abstract final class AppSplashTokens {
   static const double taglineLineHeight = 1.18;
   static const double taglineSlideStart = 0.18;
   static const double logoSlideStart = 0.12;
-  static const double ctaSlideStart = 0.35;
 
   static const double heroHeight = 260;
   static const double assetFloatDistance = 8;
   static const double assetRotationDrift = 0.035;
   static const double assetScaleDrift = 0.025;
 
-  static const SplashAssetSpec film = SplashAssetSpec(
+  static const WelcomeAssetSpec film = WelcomeAssetSpec(
     assetPath: 'assets/film.png',
     width: 126,
     left: -4,
@@ -31,7 +30,7 @@ abstract final class AppSplashTokens {
     duration: Duration(milliseconds: 2100),
   );
 
-  static const SplashAssetSpec popcorn = SplashAssetSpec(
+  static const WelcomeAssetSpec popcorn = WelcomeAssetSpec(
     assetPath: 'assets/popcorn.png',
     width: 146,
     right: -4,
@@ -41,7 +40,7 @@ abstract final class AppSplashTokens {
     phase: math.pi / 2,
   );
 
-  static const SplashAssetSpec console = SplashAssetSpec(
+  static const WelcomeAssetSpec console = WelcomeAssetSpec(
     assetPath: 'assets/console.png',
     width: 168,
     left: 56,
@@ -62,23 +61,23 @@ abstract final class AppSplashTokens {
   static const double ambientGlowSpread = 24;
   static const double ambientGlowOpacity = 0.20;
 
-  static const List<SplashStarSpec> stars = [
-    SplashStarSpec(0.16, 0.20, 2.0, AppColors.softPurple),
-    SplashStarSpec(0.76, 0.17, 1.8, AppColors.neonYellow),
-    SplashStarSpec(0.86, 0.31, 1.6, AppColors.neonPink),
-    SplashStarSpec(0.24, 0.49, 1.8, AppColors.neonPink),
-    SplashStarSpec(0.70, 0.52, 2.2, AppColors.softPurple),
-    SplashStarSpec(0.13, 0.72, 1.4, AppColors.electricPurple),
-    SplashStarSpec(0.82, 0.76, 2.0, AppColors.neonPink),
-    SplashStarSpec(0.35, 0.84, 1.4, AppColors.cyan),
+  static const List<WelcomeStarSpec> stars = [
+    WelcomeStarSpec(0.16, 0.20, 2.0, AppColors.softPurple),
+    WelcomeStarSpec(0.76, 0.17, 1.8, AppColors.neonYellow),
+    WelcomeStarSpec(0.86, 0.31, 1.6, AppColors.neonPink),
+    WelcomeStarSpec(0.24, 0.49, 1.8, AppColors.neonPink),
+    WelcomeStarSpec(0.70, 0.52, 2.2, AppColors.softPurple),
+    WelcomeStarSpec(0.13, 0.72, 1.4, AppColors.electricPurple),
+    WelcomeStarSpec(0.82, 0.76, 2.0, AppColors.neonPink),
+    WelcomeStarSpec(0.35, 0.84, 1.4, AppColors.cyan),
   ];
 
   static const double starOpacity = 0.78;
   static const double starStrokeWidth = 1.4;
 }
 
-class SplashAssetSpec {
-  const SplashAssetSpec({
+class WelcomeAssetSpec {
+  const WelcomeAssetSpec({
     required this.assetPath,
     required this.width,
     required this.angle,
@@ -101,8 +100,8 @@ class SplashAssetSpec {
   final double phase;
 }
 
-class SplashStarSpec {
-  const SplashStarSpec(this.x, this.y, this.radius, this.color);
+class WelcomeStarSpec {
+  const WelcomeStarSpec(this.x, this.y, this.radius, this.color);
 
   final double x;
   final double y;

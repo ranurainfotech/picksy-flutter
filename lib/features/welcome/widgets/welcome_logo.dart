@@ -3,8 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/theme/app_design_system.dart';
 
-class SplashLogo extends StatelessWidget {
-  const SplashLogo({super.key});
+class WelcomeLogo extends StatelessWidget {
+  const WelcomeLogo({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,11 +14,11 @@ class SplashLogo extends StatelessWidget {
             RichText(
               text: TextSpan(
                 style: AppTypography.displayLarge.copyWith(
-                  fontSize: AppSplashTokens.logoFontSize,
-                  height: AppSplashTokens.logoLineHeight,
+                  fontSize: AppWelcomeTokens.logoFontSize,
+                  height: AppWelcomeTokens.logoLineHeight,
                   fontWeight: FontWeight.w700,
                   fontStyle: FontStyle.italic,
-                  letterSpacing: AppSplashTokens.logoLetterSpacing,
+                  letterSpacing: AppWelcomeTokens.logoLetterSpacing,
                   shadows: AppShadows.elevated,
                 ),
                 children: const [
@@ -31,13 +31,13 @@ class SplashLogo extends StatelessWidget {
               ),
             ),
             Positioned(
-              top: AppSplashTokens.lightningTop,
-              right: AppSplashTokens.lightningRight,
+              top: AppWelcomeTokens.lightningTop,
+              right: AppWelcomeTokens.lightningRight,
               child:
                   const Icon(
                         AppIcons.fastAction,
                         color: AppColors.neonYellow,
-                        size: AppSplashTokens.lightningSize,
+                        size: AppWelcomeTokens.lightningSize,
                       )
                       .animate(delay: 300.ms)
                       .scale(
@@ -57,6 +57,6 @@ class SplashLogo extends StatelessWidget {
         )
         .animate()
         .fadeIn(duration: 420.ms)
-        .slideY(begin: AppSplashTokens.logoSlideStart, end: 0);
+        .slideY(begin: AppWelcomeTokens.logoSlideStart, end: 0);
   }
 }

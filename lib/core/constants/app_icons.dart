@@ -26,6 +26,7 @@ abstract final class AppIcons {
   static const IconData invite = CupertinoIcons.paperplane_fill;
   static const IconData roomCode = CupertinoIcons.number_circle_fill;
   static const IconData chevronRight = CupertinoIcons.chevron_right;
+  static const IconData logout = CupertinoIcons.square_arrow_right;
 
   static const IconData movies = CupertinoIcons.film_fill;
   static const IconData restaurants = CupertinoIcons.house_fill;
