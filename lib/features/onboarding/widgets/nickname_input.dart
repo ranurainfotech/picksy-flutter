@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_design_system.dart';
+import '../theme/app_onboarding_tokens.dart';
 
 class NicknameInput extends StatelessWidget {
   const NicknameInput({

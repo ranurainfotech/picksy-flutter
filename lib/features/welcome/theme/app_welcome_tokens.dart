@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'app_colors.dart';
+import '../../../core/theme/app_colors.dart';
 
 abstract final class AppWelcomeTokens {
   static const double logoFontSize = 76;

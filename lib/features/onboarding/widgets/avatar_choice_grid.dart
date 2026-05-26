@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/theme/app_design_system.dart';
 import '../models/avatar_option.dart';
+import '../theme/app_onboarding_tokens.dart';
 
 class AvatarChoiceGrid extends StatelessWidget {
   const AvatarChoiceGrid({

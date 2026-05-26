@@ -8,6 +8,7 @@ import '../../../core/theme/app_design_system.dart';
 import '../../../routes/app_routes.dart';
 import '../models/avatar_option.dart';
 import '../providers/onboarding_profile_provider.dart';
+import '../theme/app_onboarding_tokens.dart';
 import '../widgets/avatar_choice_grid.dart';
 import '../widgets/nickname_input.dart';
 import '../widgets/onboarding_background.dart';

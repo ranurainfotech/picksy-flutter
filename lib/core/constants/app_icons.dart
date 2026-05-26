@@ -17,15 +17,17 @@ class PicksyCategoryIcon {
 }
 
 abstract final class AppIcons {
-  static const IconData rooms = CupertinoIcons.person_3_fill;
-  static const IconData matches = CupertinoIcons.heart_fill;
-  static const IconData profile = CupertinoIcons.person_crop_circle_fill;
+  static const IconData rooms = CupertinoIcons.square_grid_2x2_fill;
+  static const IconData matches = CupertinoIcons.heart;
+  static const IconData profile = CupertinoIcons.person_crop_circle;
 
+  static const IconData plus = CupertinoIcons.plus;
   static const IconData createRoom = CupertinoIcons.plus_circle_fill;
   static const IconData joinRoom = CupertinoIcons.arrow_right_circle_fill;
   static const IconData invite = CupertinoIcons.paperplane_fill;
   static const IconData roomCode = CupertinoIcons.number_circle_fill;
   static const IconData chevronRight = CupertinoIcons.chevron_right;
+  static const IconData chevronLeft = CupertinoIcons.chevron_left;
   static const IconData logout = CupertinoIcons.square_arrow_right;
 
   static const IconData movies = CupertinoIcons.film_fill;

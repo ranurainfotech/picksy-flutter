@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_design_system.dart';
+import '../theme/app_welcome_tokens.dart';
 
 class WelcomeHeroArt extends StatelessWidget {
   const WelcomeHeroArt({super.key});

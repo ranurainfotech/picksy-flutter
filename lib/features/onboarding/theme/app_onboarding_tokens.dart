@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'app_colors.dart';
-import 'app_gradients.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_gradients.dart';
 
 abstract final class AppOnboardingTokens {
   static const String defaultNickname = 'moviebuff_07';

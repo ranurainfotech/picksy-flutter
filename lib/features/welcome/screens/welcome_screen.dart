@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_design_system.dart';
 import '../../../routes/app_routes.dart';
+import '../theme/app_welcome_tokens.dart';
 import '../widgets/welcome_background.dart';
 import '../widgets/welcome_hero_art.dart';
 import '../widgets/welcome_logo.dart';

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_design_system.dart';
+import '../theme/app_welcome_tokens.dart';
 
 class WelcomeBackground extends StatelessWidget {
   const WelcomeBackground({super.key, required this.child});

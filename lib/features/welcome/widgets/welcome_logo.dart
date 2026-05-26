@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/theme/app_design_system.dart';
+import '../theme/app_welcome_tokens.dart';
 
 class WelcomeLogo extends StatelessWidget {
   const WelcomeLogo({super.key});

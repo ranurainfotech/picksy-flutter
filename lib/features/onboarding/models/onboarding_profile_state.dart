@@ -1,4 +1,4 @@
-import '../../../core/theme/app_design_system.dart';
+import '../theme/app_onboarding_tokens.dart';
 import 'avatar_option.dart';
 
 class OnboardingProfileState {
