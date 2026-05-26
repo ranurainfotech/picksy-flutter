@@ -1,0 +1,69 @@
+---
+description: Picksy Flutter architecture, UI, state, Firebase, and performance standards
+alwaysApply: true
+---
+
+# Picksy Flutter Development Standards
+
+Picksy is a production-quality realtime Gen-Z social decision-making app for groups deciding movies, restaurants, activities, and outings. Build for a premium, immersive, cinematic, smooth, playful, modern experience while keeping startup-level development speed.
+
+## Core Principles
+
+- Write clean, scalable, readable Flutter code with production-quality structure.
+- Prefer feature-first architecture: `lib/core`, `lib/features`, `lib/routes`, `lib/shared`, and `lib/main.dart`.
+- Keep each feature modular with `models`, `providers`, `repositories`, `services`, `screens`, and `widgets`.
+- Avoid giant files, giant widgets, deeply nested widgets, and unnecessary abstractions.
+- Do not put business logic in UI widgets.
+
+## Allowed Stack
+
+- Use Flutter, Riverpod, GoRouter, Firebase, Firestore, Firebase Auth, Firebase Messaging, Hive, freezed, json_serializable, flutter_animate, and cached_network_image.
+- Do not use GetX, BLoC, or the Provider package.
+
+## State And Firebase
+
+- Use Riverpod only. Use `AsyncValue` properly, `StreamProvider` for realtime Firestore, and `StateNotifier` or `Notifier` when needed.
+- Keep providers focused and separate UI state from business state.
+- Never put Firestore logic directly in widgets.
+- Treat the app as realtime synchronized state. Prefer Firestore streams and realtime listeners.
+- Keep queries optimized, paginate large collections, and avoid fetching entire collections unnecessarily.
+- Primary Firestore collections are `users`, `rooms`, `swipes`, `matches`, and `messages`.
+- Structure Firestore data for realtime reads and app UX, not SQL-style overnormalization.
+
+## Navigation
+
+- Use GoRouter.
+- Main tabs are Rooms, Matches, and Profile.
+- Swipe screens are fullscreen routes.
+- Bottom navigation belongs only in the app shell; immersive screens should hide it.
+
+## UI And Motion
+
+- Design dark mode first with cinematic, immersive fullscreen layouts.
+- Use rounded corners, clean spacing, careful gradients, soft shadows, and glow accents sparingly.
+- Avoid ugly Material defaults, enterprise dashboard UI, overcrowded screens, random colors, and inconsistent spacing.
+- Use flutter_animate, implicit animations, smooth transitions, and subtle micro-interactions.
+- Do not overanimate or introduce janky/heavy animation controllers unnecessarily.
+
+## Performance
+
+- Swiping must feel instant.
+- Preload and cache images, use `const` widgets where possible, optimize rebuilds, and keep widgets lightweight.
+- Avoid expensive calculations in `build()`, blocking the UI thread, and rebuilding large widget trees unnecessarily.
+
+## Widgets And Models
+
+- Prefer small stateless widgets and extract sections early.
+- Create reusable widgets when they remove real duplication, not prematurely.
+- Use freezed immutable models with `copyWith`, `fromJson`, `toJson`, and json_serializable for Firestore models.
+
+## Design System
+
+- Centralize UI values in `app_colors.dart`, `app_spacing.dart`, `app_typography.dart`, `app_radius.dart`, `app_gradients.dart`, and `app_shadows.dart`.
+- Do not hardcode colors, spacing, typography, or border radius in feature UI.
+
+## Code Style
+
+- Use meaningful names, short methods, focused classes, trailing commas, and standard Dart formatting.
+- Avoid bad abbreviations, unreadable nested logic, and magic numbers/colors/spacings.
+- Optimize every decision for UX smoothness, realtime responsiveness, clean architecture, scalability, and developer speed.

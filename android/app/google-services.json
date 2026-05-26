@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "249822632504",
+    "project_id": "picksy-mobile-app",
+    "storage_bucket": "picksy-mobile-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:249822632504:android:bb63583ca8a385e586e4cd",
+        "android_client_info": {
+          "package_name": "com.picksy.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWccZNHj-nyYS-tfL3CgNlcOhhPEWB1JU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

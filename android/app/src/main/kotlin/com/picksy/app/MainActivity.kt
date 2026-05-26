@@ -1,4 +1,4 @@
-package com.example.picksy_flutter
+package com.picksy.app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyC8GnbCZ0sGhQaqyUIXlfwfpV15aPltKUw</string>
+	<key>GCM_SENDER_ID</key>
+	<string>249822632504</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.picksy.app</string>
+	<key>PROJECT_ID</key>
+	<string>picksy-mobile-app</string>
+	<key>STORAGE_BUCKET</key>
+	<string>picksy-mobile-app.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:249822632504:ios:7cdd7a8a76e0e26e86e4cd</string>
+</dict>
+</plist>
