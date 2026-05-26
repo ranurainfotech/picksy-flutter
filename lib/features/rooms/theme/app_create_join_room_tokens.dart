@@ -3,21 +3,23 @@ import 'package:flutter/material.dart';
 abstract final class AppCreateJoinRoomTokens {
   static const double topPadding = 42;
   static const double horizontalPadding = 20;
-  static const double headingFontSize = 32;
-  static const double headingLineHeight = 1.1;
   static const double headingBottomGap = 24;
   static const double categoryHeight = 72;
   static const double categoryRadius = 22;
   static const double categoryIconSize = 26;
   static const double categoryGap = 14;
   static const double joinSectionTopGap = 36;
+  static const double afterJoinSectionGap = 28;
   static const double selectedBorderWidth = 1.2;
-  static const double selectionIndicatorSize = 24;
-  static const double selectionCheckSize = 18;
+  static const double selectionIndicatorSize = 30;
+  static const double selectionCheckSize = 23;
   static const double joinLabelBottomGap = 12;
   static const double joinInputHeight = 56;
-  static const double joinInputRadius = 18;
-  static const double joinButtonHorizontalPadding = 22;
+  static const double joinInputRadius = 14;
+  static const double joinInputHorizontalPadding = 20;
+  static const double joinButtonWidth = 115;
+  static const double joinButtonPressedScale = 0.98;
+  static const double joinButtonGlowOpacity = 0.16;
   static const double dividerLabelGap = 14;
   static const double dividerVerticalMargin = 28;
   static const double createButtonHeight = 60;
@@ -41,9 +43,9 @@ abstract final class AppCreateJoinRoomTokens {
   );
 
   static const LinearGradient joinButtonGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF7B2EFF), Color(0xFFFF2DAF)],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFF6E00FF), Color(0xFF8E2BFF)],
   );
 
   static const LinearGradient createRoomGradient = LinearGradient(
@@ -53,7 +55,8 @@ abstract final class AppCreateJoinRoomTokens {
   );
 
   static const Color categoryBackground = Color(0xFF121624);
-  static const Color inputBackground = Color(0xFF121624);
+  static const Color inputBackground = Color(0xFF0F1320);
+  static const Color inputBorder = Color(0xFF1B2233);
   static const Color glowPurple = Color(0x59B026FF);
   static const Color glowPink = Color(0x59FF2DAF);
 

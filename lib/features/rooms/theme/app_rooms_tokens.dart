@@ -6,7 +6,6 @@ abstract final class AppRoomsTokens {
   static const double headerTopPadding = 20;
   static const double createButtonSize = 44;
   static const double createButtonIconSize = 28;
-  static const double createButtonRadius = 13;
 
   static const double listTopPadding = 17;
   static const double listBottomPadding = 22;
@@ -30,7 +29,7 @@ abstract final class AppRoomsTokens {
   static const double ambientGlowSize = 230;
   static const double ambientGlowBlur = 120;
   static const double ambientGlowSpread = 18;
-  static const double backgroundOrbOpacity = 0.14;
+  static const double backgroundOrbOpacity = 0.08;
   static const double cardGlowRight = -42;
   static const double cardGlowTop = -34;
   static const double cardGlowSpread = -64;
@@ -51,7 +50,7 @@ abstract final class AppRoomsTokens {
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF070912), Color(0xFF090B14), Color(0xFF05060A)],
+    colors: [Color(0xFF170C24), Color(0xFF0C1020), Color(0xFF05060A)],
   );
 
   static const LinearGradient createRoomGradient = LinearGradient(

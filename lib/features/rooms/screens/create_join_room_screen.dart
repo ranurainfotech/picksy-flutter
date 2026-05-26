@@ -8,12 +8,43 @@ import '../../../core/theme/app_design_system.dart';
 import '../../../routes/app_routes.dart';
 import '../providers/create_join_room_provider.dart';
 import '../theme/app_create_join_room_tokens.dart';
+import '../widgets/room_code_input_section.dart';
 
-class CreateJoinRoomScreen extends ConsumerWidget {
+class CreateJoinRoomScreen extends ConsumerStatefulWidget {
   const CreateJoinRoomScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CreateJoinRoomScreen> createState() =>
+      _CreateJoinRoomScreenState();
+}
+
+class _CreateJoinRoomScreenState extends ConsumerState<CreateJoinRoomScreen> {
+  late final TextEditingController _roomCodeController;
+
+  @override
+  void initState() {
+    super.initState();
+    _roomCodeController = TextEditingController(
+      text: ref.read(createJoinRoomProvider).roomCode,
+    )..addListener(_syncRoomCode);
+  }
+
+  @override
+  void dispose() {
+    _roomCodeController
+      ..removeListener(_syncRoomCode)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _syncRoomCode() {
+    ref
+        .read(createJoinRoomProvider.notifier)
+        .updateRoomCode(_roomCodeController.text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final roomState = ref.watch(createJoinRoomProvider);
     final actionState = ref.watch(createJoinRoomActionProvider);
     final notifier = ref.read(createJoinRoomProvider.notifier);
@@ -30,20 +61,31 @@ class CreateJoinRoomScreen extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppCreateJoinRoomTokens.horizontalPadding,
-                AppCreateJoinRoomTokens.topPadding,
+                0,
                 AppCreateJoinRoomTokens.horizontalPadding,
                 AppSpacing.section,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _CreateJoinBackButton(
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                          return;
+                        }
+
+                        context.go(AppRoutes.home);
+                      },
+                    ),
+                  ).animate().fadeIn(duration: 220.ms).slideX(begin: -0.08),
+                  const SizedBox(height: AppSpacing.regular),
                   Text(
                     'What are\nwe deciding?',
-                    style: AppTypography.heading2.copyWith(
-                      fontSize: AppCreateJoinRoomTokens.headingFontSize,
-                      height: AppCreateJoinRoomTokens.headingLineHeight,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.8,
+                    style: AppTypography.heading3.copyWith(
+                      color: AppColors.primaryText,
                     ),
                   ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.12),
                   const SizedBox(
@@ -64,57 +106,95 @@ class CreateJoinRoomScreen extends ConsumerWidget {
                         height: AppCreateJoinRoomTokens.categoryGap,
                       ),
                   ],
+                  Spacer(),
                   const SizedBox(
                     height: AppCreateJoinRoomTokens.joinSectionTopGap,
                   ),
-                  Text(
-                    'Join a room',
-                    style: AppTypography.caption.copyWith(
-                      fontSize: 15,
-                      color: AppColors.primaryText.withValues(alpha: 0.70),
-                      fontWeight: FontWeight.w500,
+                  RoomCodeInputSection(
+                        controller: _roomCodeController,
+                        isLoading: isLoading,
+                        onJoin: () async {
+                          final roomId = await actionNotifier.joinRoom();
+
+                          if (!context.mounted || roomId == null) {
+                            return;
+                          }
+
+                          context.go(AppRoutes.roomLobby(roomId));
+                        },
+                      )
+                      .animate()
+                      .fadeIn(delay: 260.ms, duration: 280.ms)
+                      .slideY(begin: 0.12, curve: Curves.easeOutCubic),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: AppSpacing.small),
+                    Text(
+                      errorMessage,
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.reject,
+                      ),
                     ),
-                  ),
-                  const SizedBox(
-                    height: AppCreateJoinRoomTokens.joinLabelBottomGap,
-                  ),
-                  _JoinRoomRow(
-                    errorMessage: errorMessage,
-                    isLoading: isLoading,
-                    onChanged: notifier.updateRoomCode,
-                    onJoin: () async {
-                      final roomId = await actionNotifier.joinRoom();
-
-                      if (!context.mounted || roomId == null) {
-                        return;
-                      }
-
-                      context.go(AppRoutes.roomLobby(roomId));
-                    },
-                  ),
+                  ],
                   const SizedBox(
                     height: AppCreateJoinRoomTokens.dividerVerticalMargin,
                   ),
-                  const _OrDivider(),
+                  const _OrDivider().animate().fadeIn(
+                    delay: 340.ms,
+                    duration: 260.ms,
+                  ),
                   const SizedBox(
                     height: AppCreateJoinRoomTokens.dividerVerticalMargin,
                   ),
                   _CreateRoomButton(
-                    isLoading: isLoading,
-                    onPressed: () async {
-                      final roomId = await actionNotifier.createRoom();
+                        isLoading: isLoading,
+                        onPressed: () async {
+                          final roomId = await actionNotifier.createRoom();
 
-                      if (!context.mounted || roomId == null) {
-                        return;
-                      }
+                          if (!context.mounted || roomId == null) {
+                            return;
+                          }
 
-                      context.go(AppRoutes.roomLobby(roomId));
-                    },
-                  ),
+                          context.go(AppRoutes.roomLobby(roomId));
+                        },
+                      )
+                      .animate()
+                      .fadeIn(delay: 400.ms, duration: 300.ms)
+                      .slideY(begin: 0.14, curve: Curves.easeOutCubic),
                   const Spacer(),
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateJoinBackButton extends StatelessWidget {
+  const _CreateJoinBackButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onPressed,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.elevatedCard.withValues(alpha: 0.72),
+          borderRadius: AppRadius.mediumBorder,
+          border: Border.all(color: AppColors.primaryBorder),
+          boxShadow: AppShadows.elevated,
+        ),
+        child: const SizedBox(
+          width: AppSpacing.hero,
+          height: AppSpacing.hero,
+          child: Icon(
+            AppIcons.chevronLeft,
+            color: AppColors.primaryText,
+            size: AppSpacing.icon,
           ),
         ),
       ),
@@ -265,21 +345,15 @@ class _SelectionIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!isSelected) {
-      return Container(
+      return const SizedBox(
         width: AppCreateJoinRoomTokens.selectionIndicatorSize,
         height: AppCreateJoinRoomTokens.selectionIndicatorSize,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: AppColors.primaryText.withValues(alpha: 0.26),
-          ),
-        ),
       );
     }
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.like,
+        color: AppColors.primaryText,
         shape: BoxShape.circle,
         boxShadow: AppCreateJoinRoomTokens.buttonPurpleGlow,
       ),
@@ -288,112 +362,10 @@ class _SelectionIndicator extends StatelessWidget {
         height: AppCreateJoinRoomTokens.selectionIndicatorSize,
         child: Icon(
           Icons.check_rounded,
-          color: AppColors.primaryText,
+          color: AppColors.like,
           size: AppCreateJoinRoomTokens.selectionCheckSize,
         ),
       ),
-    );
-  }
-}
-
-class _JoinRoomRow extends StatelessWidget {
-  const _JoinRoomRow({
-    required this.errorMessage,
-    required this.isLoading,
-    required this.onChanged,
-    required this.onJoin,
-  });
-
-  final String? errorMessage;
-  final bool isLoading;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onJoin;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: AppCreateJoinRoomTokens.joinInputHeight,
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  onChanged: onChanged,
-                  enabled: !isLoading,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp('[a-zA-Z0-9]')),
-                    TextInputFormatter.withFunction((oldValue, newValue) {
-                      return newValue.copyWith(
-                        text: newValue.text.toUpperCase(),
-                        selection: newValue.selection,
-                      );
-                    }),
-                  ],
-                  textInputAction: TextInputAction.done,
-                  textCapitalization: TextCapitalization.characters,
-                  style: AppTypography.button.copyWith(letterSpacing: 0.8),
-                  decoration: InputDecoration(
-                    hintText: 'Enter room code',
-                    hintStyle: AppTypography.caption.copyWith(
-                      color: AppColors.primaryText.withValues(alpha: 0.38),
-                      fontWeight: FontWeight.w700,
-                    ),
-                    filled: true,
-                    fillColor: AppCreateJoinRoomTokens.inputBackground,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.medium,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppCreateJoinRoomTokens.joinInputRadius,
-                      ),
-                      borderSide: const BorderSide(
-                        color: AppColors.primaryBorder,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppCreateJoinRoomTokens.joinInputRadius,
-                      ),
-                      borderSide: const BorderSide(color: AppColors.like),
-                    ),
-                    disabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppCreateJoinRoomTokens.joinInputRadius,
-                      ),
-                      borderSide: const BorderSide(
-                        color: AppColors.primaryBorder,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.small),
-              _TactileGradientButton(
-                label: 'Join',
-                isLoading: isLoading,
-                isExpanded: false,
-                height: AppCreateJoinRoomTokens.joinInputHeight,
-                horizontalPadding:
-                    AppCreateJoinRoomTokens.joinButtonHorizontalPadding,
-                borderRadius: AppCreateJoinRoomTokens.joinInputRadius,
-                gradient: AppCreateJoinRoomTokens.joinButtonGradient,
-                boxShadow: AppCreateJoinRoomTokens.buttonPurpleGlow,
-                onPressed: onJoin,
-              ),
-            ],
-          ),
-        ),
-        if (errorMessage != null) ...[
-          const SizedBox(height: AppSpacing.small),
-          Text(
-            errorMessage!,
-            style: AppTypography.caption.copyWith(color: AppColors.reject),
-          ),
-        ],
-      ],
     );
   }
 }
@@ -429,113 +401,9 @@ class _CreateRoomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _TactileGradientButton(
+    return AppButton.primary(
       label: 'Create a New Room',
-      isLoading: isLoading,
-      height: AppCreateJoinRoomTokens.createButtonHeight,
-      horizontalPadding: AppSpacing.section,
-      borderRadius: AppCreateJoinRoomTokens.createButtonRadius,
-      gradient: AppCreateJoinRoomTokens.createRoomGradient,
-      boxShadow: AppCreateJoinRoomTokens.createButtonGlow,
-      onPressed: onPressed,
+      onPressed: isLoading ? null : onPressed,
     );
-  }
-}
-
-class _TactileGradientButton extends StatefulWidget {
-  const _TactileGradientButton({
-    required this.label,
-    required this.isLoading,
-    required this.height,
-    required this.horizontalPadding,
-    required this.borderRadius,
-    required this.gradient,
-    required this.boxShadow,
-    required this.onPressed,
-    this.isExpanded = true,
-  });
-
-  final String label;
-  final bool isLoading;
-  final double height;
-  final double horizontalPadding;
-  final double borderRadius;
-  final Gradient gradient;
-  final List<BoxShadow> boxShadow;
-  final VoidCallback onPressed;
-  final bool isExpanded;
-
-  @override
-  State<_TactileGradientButton> createState() => _TactileGradientButtonState();
-}
-
-class _TactileGradientButtonState extends State<_TactileGradientButton> {
-  bool _isPressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final child = AnimatedScale(
-      duration: const Duration(milliseconds: 140),
-      curve: Curves.easeOutCubic,
-      scale: _isPressed && !widget.isLoading
-          ? AppCreateJoinRoomTokens.buttonPressedScale
-          : 1,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: widget.isLoading ? null : (_) => _setPressed(true),
-        onTapCancel: widget.isLoading ? null : () => _setPressed(false),
-        onTapUp: widget.isLoading ? null : (_) => _setPressed(false),
-        onTap: widget.isLoading ? null : widget.onPressed,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: widget.gradient,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            boxShadow: widget.boxShadow,
-          ),
-          child: SizedBox(
-            height: widget.height,
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: widget.horizontalPadding,
-              ),
-              child: Center(
-                child: widget.isLoading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          color: AppColors.primaryText,
-                        ),
-                      )
-                    : Text(
-                        widget.label,
-                        style: AppTypography.button.copyWith(
-                          fontSize: widget.label == 'Create a New Room'
-                              ? 17
-                              : 16,
-                          color: AppColors.primaryText,
-                        ),
-                      ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    if (!widget.isExpanded) {
-      return child;
-    }
-
-    return SizedBox(width: double.infinity, child: child);
-  }
-
-  void _setPressed(bool value) {
-    if (_isPressed == value) {
-      return;
-    }
-
-    setState(() => _isPressed = value);
   }
 }

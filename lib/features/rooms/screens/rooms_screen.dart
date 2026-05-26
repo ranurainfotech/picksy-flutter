@@ -38,8 +38,9 @@ class RoomsScreen extends ConsumerWidget {
                   data: (rooms) {
                     if (rooms.isEmpty) {
                       return RoomsEmptyState(
-                        onCreateRoom: () =>
-                            context.go(AppRoutes.createJoinRoom),
+                        onCreateRoom: () {
+                          context.push(AppRoutes.createJoinRoom);
+                        },
                       );
                     }
 
@@ -108,61 +109,7 @@ class _RoomsBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: AppRoomsTokens.backgroundGradient,
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const _AmbientRoomGlow(
-            alignment: Alignment(-0.92, -0.88),
-            color: AppColors.electricPurple,
-          ),
-          const _AmbientRoomGlow(
-            alignment: Alignment(0.94, -0.18),
-            color: AppColors.cyan,
-          ),
-          const _AmbientRoomGlow(
-            alignment: Alignment(-0.72, 0.98),
-            color: AppColors.neonPink,
-          ),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _AmbientRoomGlow extends StatelessWidget {
-  const _AmbientRoomGlow({required this.alignment, required this.color});
-
-  final Alignment alignment;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: alignment,
-      child: IgnorePointer(
-        child: Container(
-          width: AppRoomsTokens.ambientGlowSize,
-          height: AppRoomsTokens.ambientGlowSize,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(
-                  alpha: AppRoomsTokens.backgroundOrbOpacity,
-                ),
-                blurRadius: AppRoomsTokens.ambientGlowBlur,
-                spreadRadius: AppRoomsTokens.ambientGlowSpread,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    return child;
   }
 }
 
@@ -184,7 +131,7 @@ class _RoomsHeader extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.regular),
         RoomsFloatingActionButton(
-          onPressed: () => context.go(AppRoutes.createJoinRoom),
+          onPressed: () => context.push(AppRoutes.createJoinRoom),
         ),
       ],
     );

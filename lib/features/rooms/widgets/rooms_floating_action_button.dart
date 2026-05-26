@@ -16,9 +16,7 @@ class RoomsFloatingActionButton extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: AppRoomsTokens.createRoomGradient,
-          borderRadius: BorderRadius.circular(
-            AppRoomsTokens.createButtonRadius,
-          ),
+          shape: BoxShape.circle,
           boxShadow: AppRoomsTokens.createButtonShadow,
         ),
         child: const SizedBox(

@@ -41,7 +41,7 @@ abstract final class AppGradients {
   static const LinearGradient darkSurface = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF0F111A), Color(0xFF161B29)],
+    colors: [Color(0xFF090B14), Color(0xFF070A12), Color(0xFF05060B)],
   );
 
   static const LinearGradient swipeCardOverlay = LinearGradient(
