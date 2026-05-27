@@ -100,6 +100,29 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
     state = RoomSetupState.initial(category);
   }
 
+  void hydrateFromRoomData({
+    required RoomDecisionCategory category,
+    required String roomName,
+    required String mood,
+    required Set<String> genres,
+    required Set<String> platforms,
+    required double minimumRating,
+  }) {
+    final matchedMood = roomMoodOptions.firstWhere(
+      (option) => mood.toLowerCase().contains(option.label.toLowerCase()),
+      orElse: () => roomMoodOptions.first,
+    );
+
+    state = RoomSetupState(
+      category: category,
+      roomName: roomName,
+      selectedMood: matchedMood.label,
+      selectedGenres: genres,
+      selectedPlatforms: platforms,
+      minimumRating: minimumRating.clamp(1, 10),
+    );
+  }
+
   void updateRoomName(String roomName) {
     state = state.copyWith(roomName: roomName, clearError: true);
   }
@@ -202,6 +225,38 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
     } catch (error, stackTrace) {
       state = AsyncError(_friendlyError(error), stackTrace);
       return null;
+    }
+  }
+
+  Future<bool> updateRoom(String roomId) async {
+    final formNotifier = ref.read(roomSetupProvider.notifier);
+
+    if (!formNotifier.validate()) {
+      return false;
+    }
+
+    state = const AsyncLoading();
+
+    try {
+      final formState = ref.read(roomSetupProvider);
+      final mood = formState.selectedMoodOption;
+
+      await ref.read(roomRepositoryProvider).updateRoomSetup(
+            roomId: roomId,
+            name: formState.roomName.trim(),
+            mood: mood.displayLabel,
+            filters: {
+              'genres': formState.selectedGenres.toList()..sort(),
+              'streamingPlatforms': formState.selectedPlatforms.toList()..sort(),
+              'minRating': formState.minimumRating,
+            },
+          );
+
+      state = const AsyncData(null);
+      return true;
+    } catch (error, stackTrace) {
+      state = AsyncError('Could not update room details. Try again.', stackTrace);
+      return false;
     }
   }
 

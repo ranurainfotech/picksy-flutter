@@ -46,3 +46,11 @@ final remoteRoomProvider = FutureProvider.autoDispose
       final snapshot = await ref.watch(roomRepositoryProvider).getRoom(roomId);
       return snapshot.data();
     });
+
+final roomStreamProvider = StreamProvider.autoDispose
+    .family<Map<String, dynamic>?, String>((ref, roomId) {
+      return ref
+          .watch(roomRepositoryProvider)
+          .watchRoom(roomId)
+          .map((snapshot) => snapshot.data());
+    });

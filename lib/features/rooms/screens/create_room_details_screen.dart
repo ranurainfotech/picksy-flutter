@@ -7,13 +7,19 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_design_system.dart';
 import '../../../routes/app_routes.dart';
 import '../providers/create_join_room_provider.dart';
+import '../providers/rooms_provider.dart';
 import '../providers/room_setup_provider.dart';
 import '../theme/app_create_room_details_tokens.dart';
 
 class CreateRoomDetailsScreen extends ConsumerStatefulWidget {
-  const CreateRoomDetailsScreen({super.key, required this.category});
+  const CreateRoomDetailsScreen({
+    super.key,
+    required this.category,
+    this.editRoomId,
+  });
 
   final RoomDecisionCategory category;
+  final String? editRoomId;
 
   @override
   ConsumerState<CreateRoomDetailsScreen> createState() =>
@@ -23,6 +29,9 @@ class CreateRoomDetailsScreen extends ConsumerStatefulWidget {
 class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScreen> {
   late final TextEditingController _roomNameController;
   final FocusNode _roomNameFocus = FocusNode();
+  bool _hydratedFromRoom = false;
+  bool _hydrateScheduled = false;
+  bool _isSyncingRoomNameFromState = false;
 
   static const List<String> _genres = [
     'Action',
@@ -58,6 +67,9 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
   }
 
   void _onRoomNameChanged() {
+    if (_isSyncingRoomNameFromState) {
+      return;
+    }
     ref.read(roomSetupProvider.notifier).updateRoomName(_roomNameController.text);
   }
 
@@ -65,6 +77,10 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
   Widget build(BuildContext context) {
     final setupState = ref.watch(roomSetupProvider);
     final actionState = ref.watch(createRoomSetupActionProvider);
+    final editingRoomId = widget.editRoomId;
+    final editingRoomAsync = editingRoomId == null
+        ? null
+        : ref.watch(roomStreamProvider(editingRoomId));
     final setupNotifier = ref.read(roomSetupProvider.notifier);
     final isLoading = actionState.isLoading;
     final errorMessage =
@@ -72,7 +88,51 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
 
     if (_roomNameController.text != setupState.roomName &&
         !(_roomNameFocus.hasFocus)) {
-      _roomNameController.text = setupState.roomName;
+      _isSyncingRoomNameFromState = true;
+      _roomNameController.value = _roomNameController.value.copyWith(
+        text: setupState.roomName,
+        selection: TextSelection.collapsed(offset: setupState.roomName.length),
+        composing: TextRange.empty,
+      );
+      _isSyncingRoomNameFromState = false;
+    }
+
+    if (editingRoomAsync != null && !_hydratedFromRoom && !_hydrateScheduled) {
+      editingRoomAsync.whenData((room) {
+        if (!mounted || room == null || _hydratedFromRoom || _hydrateScheduled) {
+          return;
+        }
+        _hydrateScheduled = true;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _hydratedFromRoom) {
+            _hydrateScheduled = false;
+            return;
+          }
+
+          final filters = room['filters'] as Map<String, dynamic>? ?? const {};
+          final genres = Set<String>.from(
+            filters['genres'] as List? ?? const <String>[],
+          );
+          final platforms = Set<String>.from(
+            filters['streamingPlatforms'] as List? ?? const <String>[],
+          );
+          final minRatingRaw = filters['minRating'];
+          final minRating = minRatingRaw is num ? minRatingRaw.toDouble() : 7.0;
+
+          setupNotifier.hydrateFromRoomData(
+            category: widget.category,
+            roomName: room['name'] as String? ?? setupState.roomName,
+            mood: room['mood'] as String? ?? setupState.selectedMood,
+            genres: genres.isEmpty ? setupState.selectedGenres : genres,
+            platforms: platforms.isEmpty ? setupState.selectedPlatforms : platforms,
+            minimumRating: minRating,
+          );
+
+          _hydratedFromRoom = true;
+          _hydrateScheduled = false;
+        });
+      });
     }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -90,6 +150,7 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
                 children: [
                   const SizedBox(height: AppCreateRoomDetailsTokens.topBarTopMargin),
                   _CreateRoomTopBar(
+                    title: editingRoomId == null ? 'Create Room' : 'Edit Room',
                     onBack: () {
                       if (context.canPop()) {
                         context.pop();
@@ -269,19 +330,31 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
                         ],
                         const SizedBox(height: AppSpacing.section),
                         AppButton.primary(
-                          label: 'Start Deciding →',
+                          label: editingRoomId == null
+                              ? 'Start Deciding →'
+                              : 'Save Room Changes',
                           onPressed: isLoading
                               ? null
                               : () async {
-                                  final roomId = await ref
-                                      .read(createRoomSetupActionProvider.notifier)
-                                      .createRoom();
+                                  if (editingRoomId != null) {
+                                    final saved = await ref
+                                        .read(createRoomSetupActionProvider.notifier)
+                                        .updateRoom(editingRoomId);
+                                    if (!context.mounted || !saved) {
+                                      return;
+                                    }
+                                    context.go(AppRoutes.roomLobby(editingRoomId));
+                                  } else {
+                                    final roomId = await ref
+                                        .read(createRoomSetupActionProvider.notifier)
+                                        .createRoom();
 
-                                  if (!context.mounted || roomId == null) {
-                                    return;
+                                    if (!context.mounted || roomId == null) {
+                                      return;
+                                    }
+
+                                    context.go(AppRoutes.roomLobby(roomId));
                                   }
-
-                                  context.go(AppRoutes.roomLobby(roomId));
                                 },
                         ),
                       ],
@@ -359,9 +432,13 @@ class _AmbientGlow extends StatelessWidget {
 }
 
 class _CreateRoomTopBar extends StatelessWidget {
-  const _CreateRoomTopBar({required this.onBack});
+  const _CreateRoomTopBar({
+    required this.onBack,
+    required this.title,
+  });
 
   final VoidCallback onBack;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -370,7 +447,7 @@ class _CreateRoomTopBar extends StatelessWidget {
         _CreateRoomBackButton(onPressed: onBack),
         const Spacer(),
         Text(
-          'Create Room',
+          title,
           style: AppTypography.bodyLarge.copyWith(
             fontWeight: FontWeight.w600,
           ),

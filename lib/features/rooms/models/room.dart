@@ -8,7 +8,6 @@ part 'room.g.dart';
 
 @freezed
 abstract class Room with _$Room {
-  @JsonSerializable(explicitToJson: true)
   const factory Room({
     required String id,
     required String name,

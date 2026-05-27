@@ -23,6 +23,10 @@ class RoomRepository {
     final roomRef = _rooms.doc(roomId);
     final payload = room.copyWith(id: roomId).toJson()
       ..remove('createdAt');
+    final filters = payload['filters'];
+    if (filters is! Map<String, dynamic>) {
+      payload['filters'] = room.filters.toJson();
+    }
 
     await roomRef.set({
       ...payload,
@@ -62,6 +66,57 @@ class RoomRepository {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> watchRoomsForUser(String uid) {
     return _rooms.where('members', arrayContains: uid).snapshots();
+  }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> watchRoom(String roomId) {
+    return _rooms.doc(roomId.trim().toUpperCase()).snapshots();
+  }
+
+  Future<void> updateRoomName({required String roomId, required String name}) {
+    return _rooms.doc(roomId.trim().toUpperCase()).update({'name': name.trim()});
+  }
+
+  Future<void> updateRoomStatus({required String roomId, required String status}) {
+    return _rooms.doc(roomId.trim().toUpperCase()).update({'status': status});
+  }
+
+  Future<void> updateRoomSetup({
+    required String roomId,
+    required String name,
+    required String mood,
+    required Map<String, dynamic> filters,
+  }) {
+    return _rooms.doc(roomId.trim().toUpperCase()).update({
+      'name': name.trim(),
+      'mood': mood,
+      'filters': filters,
+    });
+  }
+
+  Future<void> leaveRoom({required String roomId, required String uid}) async {
+    final roomRef = _rooms.doc(roomId.trim().toUpperCase());
+    final snapshot = await roomRef.get();
+
+    if (!snapshot.exists) {
+      throw const RoomNotFoundException();
+    }
+
+    final data = snapshot.data() ?? <String, dynamic>{};
+    final members = List<String>.from(data['members'] as List? ?? const <String>[]);
+
+    if (!members.contains(uid)) {
+      return;
+    }
+
+    final nextCount = (members.length - 1).clamp(0, 9999);
+    await roomRef.update({
+      'members': FieldValue.arrayRemove([uid]),
+      'memberCount': nextCount,
+    });
+  }
+
+  Future<void> deleteRoom(String roomId) {
+    return _rooms.doc(roomId.trim().toUpperCase()).delete();
   }
 
   Future<String> _generateUniqueRoomId() async {
