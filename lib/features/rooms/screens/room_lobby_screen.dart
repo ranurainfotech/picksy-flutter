@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_design_system.dart';
 import '../../../routes/app_routes.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../models/room_preview.dart';
 import '../providers/room_repository_provider.dart';
 import '../providers/rooms_provider.dart';
 
@@ -33,7 +34,9 @@ class RoomLobbyScreen extends ConsumerWidget {
             ref.watch(authRepositoryProvider).currentUser;
         final uid = user?.uid;
         final members = List<String>.from(room['members'] as List? ?? const <String>[]);
-        final memberCount = (room['memberCount'] as int?) ?? members.length;
+        final memberCount = ((room['memberCount'] as int?) ?? 0) > members.length
+            ? (room['memberCount'] as int?) ?? 0
+            : members.length;
         final isHost = uid != null && room['createdBy'] == uid;
         final status = (room['status'] as String? ?? 'waiting').toLowerCase();
         final roomName = room['name'] as String? ?? '$roomId Room';
@@ -68,9 +71,15 @@ class RoomLobbyScreen extends ConsumerWidget {
                               'mode': 'edit',
                             },
                           ),
-                        ).animate().fadeIn(duration: 220.ms),
+                        )
+                            .animate()
+                            .fadeIn(duration: 220.ms)
+                            .slideY(begin: -0.08, curve: Curves.easeOutCubic),
                         const SizedBox(height: 32),
-                        _AvatarRow(memberCount: memberCount),
+                        _AvatarRow(memberCount: memberCount)
+                            .animate()
+                            .fadeIn(delay: 60.ms, duration: 260.ms)
+                            .slideY(begin: 0.12, curve: Curves.easeOutCubic),
                         const SizedBox(height: 24),
                         Text(
                           roomName,
@@ -83,12 +92,18 @@ class RoomLobbyScreen extends ConsumerWidget {
                             letterSpacing: -0.5,
                             color: Colors.white,
                           ),
-                        ),
+                        )
+                            .animate()
+                            .fadeIn(delay: 120.ms, duration: 300.ms)
+                            .slideY(begin: 0.1, curve: Curves.easeOutCubic),
                         const SizedBox(height: 8),
                         Text(
                           _categoryLabel(category),
                           style: TextStyle(color: Colors.white.withValues(alpha: 0.55)),
-                        ),
+                        )
+                            .animate()
+                            .fadeIn(delay: 150.ms, duration: 260.ms)
+                            .slideY(begin: 0.08, curve: Curves.easeOutCubic),
                         const SizedBox(height: 32),
                         _CodeCard(
                           code: roomId,
@@ -97,31 +112,40 @@ class RoomLobbyScreen extends ConsumerWidget {
                             await Clipboard.setData(ClipboardData(text: inviteLink));
                             HapticFeedback.lightImpact();
                             if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Invite link copied')),
+                              _showThemedFloatingSnackBar(
+                                ScaffoldMessenger.of(context),
+                                'Invite link copied',
                               );
                             }
                           },
-                        ),
+                        )
+                            .animate()
+                            .fadeIn(delay: 200.ms, duration: 300.ms)
+                            .slideY(begin: 0.12, curve: Curves.easeOutCubic),
                         const SizedBox(height: 24),
                         _ShareRow(
                           roomCode: roomId,
                           inviteLink: _buildRoomInviteLink(roomId),
                           roomName: roomName,
-                        ),
+                        )
+                            .animate()
+                            .fadeIn(delay: 260.ms, duration: 300.ms)
+                            .slideY(begin: 0.14, curve: Curves.easeOutCubic),
                         const Spacer(),
                         AppButton.primary(
                           label: isHost ? 'Start Swiping →' : 'Waiting for host…',
                           onPressed: isHost
                               ? () async {
-                                  await ref.read(roomRepositoryProvider).updateRoomStatus(
-                                        roomId: roomId,
-                                        status: 'active',
-                                      );
+                                  await ref
+                                      .read(roomRepositoryProvider)
+                                      .updateRoomStatus(roomId: roomId, status: 'active');
                                   if (context.mounted) context.go(AppRoutes.roomSwipe(roomId));
                                 }
                               : null,
-                        ),
+                        )
+                            .animate()
+                            .fadeIn(delay: 320.ms, duration: 320.ms)
+                            .slideY(begin: 0.16, curve: Curves.easeOutCubic),
                         const SizedBox(height: 16),
                       ],
                     ),
@@ -156,7 +180,6 @@ class RoomLobbyScreen extends ConsumerWidget {
         : _defaultInviteBaseUrl;
     return '$sanitizedBase/rooms/${roomId.toUpperCase()}';
   }
-
 }
 
 class _TopBar extends StatelessWidget {
@@ -202,28 +225,37 @@ class _AvatarRow extends StatelessWidget {
   final int memberCount;
   @override
   Widget build(BuildContext context) {
-    final extra = (memberCount - 3).clamp(0, 99);
+    final avatarAssets = RoomPreview.generateAvatarAssetPaths(memberCount);
+    final visibleCount = avatarAssets.length > 3 ? 3 : avatarAssets.length;
+    final extra = (memberCount - visibleCount).clamp(0, 99);
     return SizedBox(
       width: 180,
       height: 54,
-      child: Stack(children: [
-        _avatar(0, 'assets/avatars/avatar1.png'),
-        _avatar(42, 'assets/avatars/avatar2.png'),
-        _avatar(84, 'assets/avatars/avatar3.png'),
-        Positioned(
-          left: 126,
-          child: Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      child: Stack(
+        children: [
+          for (var index = 0; index < visibleCount; index += 1)
+            _avatar(index * 42, avatarAssets[index]),
+          if (extra > 0)
+            Positioned(
+              left: visibleCount * 42,
+              child: Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                ),
+                child: Center(
+                  child: Text(
+                    '+$extra',
+                    style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
             ),
-            child: Center(child: Text('+$extra', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w700))),
-          ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 
@@ -234,7 +266,10 @@ class _AvatarRow extends StatelessWidget {
         width: 54,
         height: 54,
         padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white24, width: 2)),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white24, width: 2),
+        ),
         child: ClipOval(child: Image.asset(asset, fit: BoxFit.cover)),
       ),
     );
@@ -255,74 +290,96 @@ class _CodeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: const Color(0xFFFF2FBF), width: 2),
       ),
-      child: Column(children: [
-        Row(children: [
-          const Text('Room Code', style: TextStyle(color: Color(0xFFD946EF), fontWeight: FontWeight.w600)),
-          const Spacer(),
-          Icon(CupertinoIcons.chevron_right, color: Colors.white.withValues(alpha: 0.45)),
-        ]),
-        const Spacer(),
-        Row(children: [
-          Expanded(
-            child: ShaderMask(
-              blendMode: BlendMode.srcIn,
-              shaderCallback: (bounds) => const LinearGradient(colors: [Color(0xFFFF2FBF), Color(0xFFA855F7)]).createShader(bounds),
-              child: Text(code, style: const TextStyle(fontSize: 54, fontWeight: FontWeight.w900, letterSpacing: 2.5, color: Colors.white)),
-            ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Room Code',
+                style: TextStyle(color: Color(0xFFD946EF), fontWeight: FontWeight.w600),
+              ),
+              const Spacer(),
+              Icon(CupertinoIcons.chevron_right, color: Colors.white.withValues(alpha: 0.45)),
+            ],
           ),
-          GestureDetector(onTap: onCopy, child: const Icon(CupertinoIcons.doc_on_doc, size: 28, color: Color(0xFFFF2FBF))),
-        ]),
-        const Spacer(),
-      ]),
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(
+                child: ShaderMask(
+                  blendMode: BlendMode.srcIn,
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Color(0xFFFF2FBF), Color(0xFFA855F7)],
+                  ).createShader(bounds),
+                  child: Text(
+                    code,
+                    style: const TextStyle(
+                      fontSize: 54,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2.5,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: onCopy,
+                child: const Icon(CupertinoIcons.doc_on_doc, size: 28, color: Color(0xFFFF2FBF)),
+              ),
+            ],
+          ),
+          const Spacer(),
+        ],
+      ),
     );
   }
 }
 
 class _ShareRow extends StatelessWidget {
-  const _ShareRow({
-    required this.roomCode,
-    required this.inviteLink,
-    required this.roomName,
-  });
+  const _ShareRow({required this.roomCode, required this.inviteLink, required this.roomName});
   final String roomCode;
   final String inviteLink;
   final String roomName;
 
-  String get _inviteText =>
-      'Join my Picksy room "$roomName" ($roomCode): $inviteLink';
+  String get _inviteText => 'Join my Picksy room "$roomName" ($roomCode): $inviteLink';
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      Text('Share this code with your friends', style: TextStyle(color: Colors.white.withValues(alpha: 0.55))),
-      const SizedBox(height: 14),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        _social(
-          label: 'WA',
-          context: context,
-          icon: FontAwesomeIcons.whatsapp,
-          iconColor: const Color(0xFF25D366),
+    return Column(
+      children: [
+        Text(
+          'Share this code with your friends',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.55)),
         ),
-        const SizedBox(width: 16),
-        _social(
-          label: 'IG',
-          context: context,
-          icon: FontAwesomeIcons.instagram,
-          iconColor: const Color(0xFFE1306C),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _social(
+              label: 'WA',
+              context: context,
+              icon: FontAwesomeIcons.whatsapp,
+              iconColor: const Color(0xFF25D366),
+            ),
+            const SizedBox(width: 16),
+            _social(
+              label: 'IG',
+              context: context,
+              icon: FontAwesomeIcons.instagram,
+              iconColor: const Color(0xFFE1306C),
+            ),
+            const SizedBox(width: 16),
+            _social(
+              label: 'SC',
+              context: context,
+              icon: FontAwesomeIcons.snapchat,
+              iconColor: const Color(0xFFFFFC00),
+            ),
+            const SizedBox(width: 16),
+            _social(label: '⋯', context: context),
+          ],
         ),
-        const SizedBox(width: 16),
-        _social(
-          label: 'SC',
-          context: context,
-          icon: FontAwesomeIcons.snapchat,
-          iconColor: const Color(0xFFFFFC00),
-        ),
-        const SizedBox(width: 16),
-        _social(
-          label: '⋯',
-          context: context,
-        ),
-      ]),
-    ]);
+      ],
+    );
   }
 
   Widget _social({
@@ -339,17 +396,12 @@ class _ShareRow extends StatelessWidget {
 
         Future<void> fallbackShare() async {
           await SharePlus.instance.share(
-            ShareParams(
-              text: _inviteText,
-              subject: 'Join my Picksy room',
-            ),
+            ShareParams(text: _inviteText, subject: 'Join my Picksy room'),
           );
         }
 
         if (label == 'WA') {
-          final waUri = Uri.parse(
-            'https://wa.me/?text=${Uri.encodeComponent(_inviteText)}',
-          );
+          final waUri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(_inviteText)}');
           if (await canLaunchUrl(waUri)) {
             await launchUrl(waUri, mode: LaunchMode.externalApplication);
             return;
@@ -359,16 +411,15 @@ class _ShareRow extends StatelessWidget {
         }
 
         if (label == 'IG') {
-          final igUri = Uri.parse(
-            'instagram://share?text=${Uri.encodeComponent(_inviteText)}',
-          );
+          final igUri = Uri.parse('instagram://share?text=${Uri.encodeComponent(_inviteText)}');
           if (await canLaunchUrl(igUri)) {
             await launchUrl(igUri, mode: LaunchMode.externalApplication);
             return;
           }
           await fallbackShare();
-          messenger.showSnackBar(
-            const SnackBar(content: Text('Instagram share not available. Opened share sheet.')),
+          _showThemedFloatingSnackBar(
+            messenger,
+            'Instagram share not available. Opened share sheet.',
           );
           return;
         }
@@ -382,8 +433,9 @@ class _ShareRow extends StatelessWidget {
             return;
           }
           await fallbackShare();
-          messenger.showSnackBar(
-            const SnackBar(content: Text('Snapchat share not available. Opened share sheet.')),
+          _showThemedFloatingSnackBar(
+            messenger,
+            'Snapchat share not available. Opened share sheet.',
           );
           return;
         }
@@ -398,9 +450,7 @@ class _ShareRow extends StatelessWidget {
           color: backgroundColor ?? Colors.white.withValues(alpha: 0.05),
           gradient: backgroundGradient,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.06),
-          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.2),
@@ -410,7 +460,10 @@ class _ShareRow extends StatelessWidget {
           ],
         ),
         child: icon == null
-            ? Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))
+            ? Text(
+                label,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+              )
             : FaIcon(icon, color: iconColor ?? Colors.white, size: 36),
       ),
     );
@@ -443,8 +496,38 @@ class _MissingRoomView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: AppButton.secondary(label: 'Back to Rooms', onPressed: () => context.go(AppRoutes.home)),
+        child: AppButton.secondary(
+          label: 'Back to Rooms',
+          onPressed: () => context.go(AppRoutes.home),
+        ),
       ),
     );
   }
+}
+
+void _showThemedFloatingSnackBar(ScaffoldMessengerState messenger, String message) {
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        message,
+        style: const TextStyle(
+          fontFamily: AppTypography.primaryFont,
+          fontFamilyFallback: AppTypography.fallbackFonts,
+          fontWeight: FontWeight.w600,
+          color: AppColors.primaryText,
+        ),
+      ),
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      backgroundColor: const Color(0xFF171D2D),
+      elevation: 10,
+      duration: const Duration(milliseconds: 1600),
+    ),
+  );
 }

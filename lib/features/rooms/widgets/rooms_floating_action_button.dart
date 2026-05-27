@@ -25,7 +25,7 @@ class RoomsFloatingActionButton extends StatelessWidget {
           child: Icon(
             AppIcons.plus,
             color: AppColors.primaryText,
-            size: AppRoomsTokens.createButtonIconSize,
+            size: AppRoomsTokens.createButtonIconSize - 2,
           ),
         ),
       ),

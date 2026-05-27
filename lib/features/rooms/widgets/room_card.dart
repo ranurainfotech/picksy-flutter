@@ -226,7 +226,7 @@ class _RoomDetails extends StatelessWidget {
         const SizedBox(height: AppSpacing.regular),
         Row(
           children: [
-            MemberAvatarStack(assetPaths: room.avatarAssetPaths),
+            MemberAvatarStack(assetPaths: room.avatarAssetPaths, totalCount: room.membersCount),
             const Spacer(),
             SizedBox(
               width: AppRoomsTokens.memberCountWidth,

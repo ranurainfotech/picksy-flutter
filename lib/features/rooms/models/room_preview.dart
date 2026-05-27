@@ -3,6 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_design_system.dart';
 
 class RoomPreview {
+  static const List<String> _defaultAvatarAssets = <String>[
+    'assets/avatars/avatar1.png',
+    'assets/avatars/avatar2.png',
+    'assets/avatars/avatar3.png',
+    'assets/avatars/avatar4.png',
+    'assets/avatars/avatar5.png',
+    'assets/avatars/avatar6.png',
+  ];
+
   const RoomPreview({
     required this.id,
     required this.title,
@@ -26,8 +35,11 @@ class RoomPreview {
   factory RoomPreview.fromRoomData({required String roomId, required Map<String, dynamic> data}) {
     final categoryId = (data['category'] as String? ?? data['type'] as String? ?? 'movies')
         .toLowerCase();
-    final membersCount = data['memberCount'] as int? ??
-        (data['members'] is List ? (data['members'] as List).length : 1);
+    final memberCountFromField = data['memberCount'] as int? ?? 0;
+    final memberCountFromMembers = data['members'] is List ? (data['members'] as List).length : 0;
+    final membersCount = memberCountFromField > memberCountFromMembers
+        ? memberCountFromField
+        : memberCountFromMembers;
     final title = data['name'] as String? ?? '${roomId.toUpperCase()} Room';
 
     return RoomPreview(
@@ -38,11 +50,19 @@ class RoomPreview {
       membersCount: membersCount,
       posterIcon: categoryIcon(categoryId),
       posterColors: categoryColors(categoryId),
-      avatarAssetPaths: const [
-        'assets/avatars/avatar1.png',
-        'assets/avatars/avatar2.png',
-        'assets/avatars/avatar3.png',
-      ],
+      avatarAssetPaths: generateAvatarAssetPaths(membersCount),
+    );
+  }
+
+  static List<String> generateAvatarAssetPaths(int count) {
+    if (count <= 0) {
+      return const <String>[];
+    }
+
+    return List<String>.generate(
+      count,
+      (index) => _defaultAvatarAssets[index % _defaultAvatarAssets.length],
+      growable: false,
     );
   }
 

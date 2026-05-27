@@ -47,9 +47,8 @@ class RoomsScreen extends ConsumerWidget {
                     return _RoomsList(rooms: rooms);
                   },
                   loading: () => const _RoomsLoadingState(),
-                  error: (error, stackTrace) => _RoomsErrorState(
-                    onRetry: () => ref.invalidate(roomsProvider),
-                  ),
+                  error: (error, stackTrace) =>
+                      _RoomsErrorState(onRetry: () => ref.invalidate(roomsProvider)),
                 ),
               ),
             ],
@@ -65,9 +64,7 @@ class _RoomsLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(color: AppColors.neonPink),
-    );
+    return const Center(child: CircularProgressIndicator(color: AppColors.neonPink));
   }
 }
 
@@ -89,9 +86,7 @@ class _RoomsErrorState extends StatelessWidget {
             Text(
               'Check your connection and try again.',
               textAlign: TextAlign.center,
-              style: AppTypography.bodyRegular.copyWith(
-                color: AppColors.secondaryText,
-              ),
+              style: AppTypography.bodyRegular.copyWith(color: AppColors.secondaryText),
             ),
             const SizedBox(height: AppSpacing.section),
             AppButton.secondary(label: 'Retry', onPressed: onRetry),
@@ -123,16 +118,13 @@ class _RoomsHeader extends StatelessWidget {
         Expanded(
           child: Text(
             'Your Rooms',
-            style: AppTypography.heading2.copyWith(
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.7,
+            style: AppTypography.heading3.copyWith(
+              color: AppColors.primaryText,
             ),
           ),
         ),
         const SizedBox(width: AppSpacing.regular),
-        RoomsFloatingActionButton(
-          onPressed: () => context.push(AppRoutes.createJoinRoom),
-        ),
+        RoomsFloatingActionButton(onPressed: () => context.push(AppRoutes.createJoinRoom)),
       ],
     );
   }
@@ -149,15 +141,11 @@ class _RoomsList extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppRoomsTokens.listBottomPadding),
       physics: const BouncingScrollPhysics(),
       itemCount: rooms.length,
-      separatorBuilder: (context, index) =>
-          const SizedBox(height: AppSpacing.compact),
+      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.compact),
       itemBuilder: (context, index) {
         final room = rooms[index];
 
-        return RoomCard(
-              room: room,
-              onTap: () => context.go(AppRoutes.roomLobby(room.id)),
-            )
+        return RoomCard(room: room, onTap: () => context.go(AppRoutes.roomLobby(room.id)))
             .animate()
             .fadeIn(delay: (60 * index).ms, duration: 300.ms)
             .slideX(begin: 0.08, curve: Curves.easeOutCubic);
