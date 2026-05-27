@@ -24,18 +24,20 @@ class RoomPreview {
   final List<String> avatarAssetPaths;
 
   factory RoomPreview.fromRoomData({required String roomId, required Map<String, dynamic> data}) {
-    final type = (data['type'] as String? ?? 'movies').toLowerCase();
-    final members = data['members'];
-    final membersCount = members is List ? members.length : 1;
+    final categoryId = (data['category'] as String? ?? data['type'] as String? ?? 'movies')
+        .toLowerCase();
+    final membersCount = data['memberCount'] as int? ??
+        (data['members'] is List ? (data['members'] as List).length : 1);
+    final title = data['name'] as String? ?? '${roomId.toUpperCase()} Room';
 
     return RoomPreview(
       id: roomId.toUpperCase(),
-      title: '${roomId.toUpperCase()} Room',
-      category: categoryLabel(type),
-      emoji: categoryEmoji(type),
+      title: title,
+      category: categoryLabel(categoryId),
+      emoji: categoryEmoji(categoryId),
       membersCount: membersCount,
-      posterIcon: categoryIcon(type),
-      posterColors: categoryColors(type),
+      posterIcon: categoryIcon(categoryId),
+      posterColors: categoryColors(categoryId),
       avatarAssetPaths: const [
         'assets/avatars/avatar1.png',
         'assets/avatars/avatar2.png',

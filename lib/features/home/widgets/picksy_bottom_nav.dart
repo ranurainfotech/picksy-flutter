@@ -43,6 +43,7 @@ class PicksyBottomNav extends StatelessWidget {
           ),
           child: SafeArea(
             top: false,
+            bottom: false,
             child: SizedBox(
               height: AppHomeTokens.bottomNavHeight,
               child: Row(
@@ -66,11 +67,7 @@ class PicksyBottomNav extends StatelessWidget {
 }
 
 class _PicksyBottomNavItem extends StatelessWidget {
-  const _PicksyBottomNavItem({
-    required this.item,
-    required this.isSelected,
-    required this.onTap,
-  });
+  const _PicksyBottomNavItem({required this.item, required this.isSelected, required this.onTap});
 
   final _PicksyNavItem item;
   final bool isSelected;

@@ -147,14 +147,11 @@ class _CreateJoinRoomScreenState extends ConsumerState<CreateJoinRoomScreen> {
                   ),
                   _CreateRoomButton(
                         isLoading: isLoading,
-                        onPressed: () async {
-                          final roomId = await actionNotifier.createRoom();
-
-                          if (!context.mounted || roomId == null) {
-                            return;
-                          }
-
-                          context.go(AppRoutes.roomLobby(roomId));
+                        onPressed: () {
+                          context.push(
+                            AppRoutes.roomSetup,
+                            extra: roomState.selectedCategory,
+                          );
                         },
                       )
                       .animate()

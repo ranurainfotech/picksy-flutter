@@ -87,24 +87,6 @@ class CreateJoinRoomActionNotifier extends AsyncNotifier<void> {
   @override
   Future<void> build() async {}
 
-  Future<String?> createRoom() async {
-    state = const AsyncLoading();
-
-    try {
-      final uid = _requireUid();
-      final formState = ref.read(createJoinRoomProvider);
-      final roomId = await ref
-          .read(roomRepositoryProvider)
-          .createRoom(type: formState.selectedCategory.id, createdBy: uid);
-
-      state = const AsyncData(null);
-      return roomId;
-    } catch (error, stackTrace) {
-      state = AsyncError(_friendlyError(error), stackTrace);
-      return null;
-    }
-  }
-
   Future<String?> joinRoom() async {
     final formNotifier = ref.read(createJoinRoomProvider.notifier);
 

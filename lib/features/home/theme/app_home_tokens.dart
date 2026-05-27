@@ -4,7 +4,7 @@ import '../../../core/theme/app_colors.dart';
 
 abstract final class AppHomeTokens {
   static const double bottomNavHeight = 82;
-  static const double bottomNavIconSize = 25;
+  static const double bottomNavIconSize = 30;
   static const double bottomNavTopPadding = 10;
   static const double bottomNavItemGap = 5;
   static const double bottomNavBorderOpacity = 0.75;

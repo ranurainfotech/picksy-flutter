@@ -5,6 +5,8 @@ import '../features/auth/providers/auth_providers.dart';
 import '../features/home/screens/home_shell.dart';
 import '../features/onboarding/screens/nickname_avatar_screen.dart';
 import '../features/rooms/screens/create_join_room_screen.dart';
+import '../features/rooms/providers/create_join_room_provider.dart';
+import '../features/rooms/screens/create_room_details_screen.dart';
 import '../features/rooms/screens/room_lobby_screen.dart';
 import '../features/swipe/screens/swipe_experience_screen.dart';
 import '../features/welcome/screens/welcome_screen.dart';
@@ -56,6 +58,16 @@ GoRouter createAppRouter(WidgetRef ref) {
       GoRoute(
         path: AppRoutes.createJoinRoom,
         builder: (context, state) => const CreateJoinRoomScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.roomSetup,
+        builder: (context, state) {
+          final category = state.extra is RoomDecisionCategory
+              ? state.extra! as RoomDecisionCategory
+              : RoomDecisionCategory.movies;
+
+          return CreateRoomDetailsScreen(category: category);
+        },
       ),
       GoRoute(
         path: AppRoutes.roomLobbyPattern,

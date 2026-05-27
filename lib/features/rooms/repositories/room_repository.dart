@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../models/room.dart';
+
 class RoomNotFoundException implements Exception {
   const RoomNotFoundException();
 }
@@ -16,20 +18,15 @@ class RoomRepository {
   CollectionReference<Map<String, dynamic>> get _rooms =>
       _firestore.collection('rooms');
 
-  Future<String> createRoom({
-    required String type,
-    required String createdBy,
-  }) async {
-    final roomId = await _generateUniqueRoomId();
+  Future<String> createRoom({required Room room}) async {
+    final roomId = room.id.isNotEmpty ? room.id : await _generateUniqueRoomId();
     final roomRef = _rooms.doc(roomId);
+    final payload = room.copyWith(id: roomId).toJson()
+      ..remove('createdAt');
 
     await roomRef.set({
-      'roomId': roomId,
-      'type': type,
-      'createdBy': createdBy,
-      'members': [createdBy],
+      ...payload,
       'createdAt': FieldValue.serverTimestamp(),
-      'status': 'waiting',
     });
 
     return roomId;
@@ -44,8 +41,16 @@ class RoomRepository {
       throw const RoomNotFoundException();
     }
 
+    final data = snapshot.data();
+    final members = List<String>.from(data?['members'] as List? ?? []);
+
+    if (members.contains(uid)) {
+      return normalizedRoomId;
+    }
+
     await roomRef.update({
       'members': FieldValue.arrayUnion([uid]),
+      'memberCount': members.length + 1,
     });
 
     return normalizedRoomId;
