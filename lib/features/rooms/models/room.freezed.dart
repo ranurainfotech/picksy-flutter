@@ -227,8 +227,8 @@ return $default(_that.id,_that.name,_that.category,_that.mood,_that.createdBy,_t
 }
 
 /// @nodoc
+@JsonSerializable()
 
-@JsonSerializable(explicitToJson: true)
 class _Room implements Room {
   const _Room({required this.id, required this.name, required this.category, required this.mood, required this.createdBy, required this.status, final  List<String> members = const <String>[], this.memberCount = 1, required this.filters, this.currentCardIndex = 0, final  List<String> matches = const <String>[], final  List<String> watchlist = const <String>[], @TimestampDateTimeConverter() this.createdAt}): _members = members,_matches = matches,_watchlist = watchlist;
   factory _Room.fromJson(Map<String, dynamic> json) => _$RoomFromJson(json);

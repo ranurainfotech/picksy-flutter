@@ -7,20 +7,24 @@ part of 'room_filters.dart';
 // **************************************************************************
 
 _RoomFilters _$RoomFiltersFromJson(Map<String, dynamic> json) => _RoomFilters(
-  genres:
-      (json['genres'] as List<dynamic>?)?.map((e) => e as String).toList() ??
-      const <String>[],
-  streamingPlatforms:
-      (json['streamingPlatforms'] as List<dynamic>?)
-          ?.map((e) => e as String)
+  genreIds:
+      (json['genreIds'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
           .toList() ??
-      const <String>[],
+      const <int>[],
+  providerIds:
+      (json['providerIds'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
+          .toList() ??
+      const <int>[],
   minRating: (json['minRating'] as num?)?.toDouble() ?? 0,
+  releaseYear: (json['releaseYear'] as num?)?.toInt() ?? 2024,
 );
 
 Map<String, dynamic> _$RoomFiltersToJson(_RoomFilters instance) =>
     <String, dynamic>{
-      'genres': instance.genres,
-      'streamingPlatforms': instance.streamingPlatforms,
+      'genreIds': instance.genreIds,
+      'providerIds': instance.providerIds,
       'minRating': instance.minRating,
+      'releaseYear': instance.releaseYear,
     };

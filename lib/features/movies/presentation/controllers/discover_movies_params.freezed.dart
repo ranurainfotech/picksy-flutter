@@ -3,7 +3,7 @@
 // ignore_for_file: type=lint
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
-part of 'room_filters.dart';
+part of 'discover_movies_params.dart';
 
 // **************************************************************************
 // FreezedGenerator
@@ -11,41 +11,38 @@ part of 'room_filters.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-
 /// @nodoc
-mixin _$RoomFilters {
+mixin _$DiscoverMoviesParams {
 
  List<int> get genreIds; List<int> get providerIds; double get minRating; int get releaseYear;
-/// Create a copy of RoomFilters
+/// Create a copy of DiscoverMoviesParams
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-$RoomFiltersCopyWith<RoomFilters> get copyWith => _$RoomFiltersCopyWithImpl<RoomFilters>(this as RoomFilters, _$identity);
+$DiscoverMoviesParamsCopyWith<DiscoverMoviesParams> get copyWith => _$DiscoverMoviesParamsCopyWithImpl<DiscoverMoviesParams>(this as DiscoverMoviesParams, _$identity);
 
-  /// Serializes this RoomFilters to a JSON map.
-  Map<String, dynamic> toJson();
 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RoomFilters&&const DeepCollectionEquality().equals(other.genreIds, genreIds)&&const DeepCollectionEquality().equals(other.providerIds, providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DiscoverMoviesParams&&const DeepCollectionEquality().equals(other.genreIds, genreIds)&&const DeepCollectionEquality().equals(other.providerIds, providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(genreIds),const DeepCollectionEquality().hash(providerIds),minRating,releaseYear);
 
 @override
 String toString() {
-  return 'RoomFilters(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear)';
+  return 'DiscoverMoviesParams(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class $RoomFiltersCopyWith<$Res>  {
-  factory $RoomFiltersCopyWith(RoomFilters value, $Res Function(RoomFilters) _then) = _$RoomFiltersCopyWithImpl;
+abstract mixin class $DiscoverMoviesParamsCopyWith<$Res>  {
+  factory $DiscoverMoviesParamsCopyWith(DiscoverMoviesParams value, $Res Function(DiscoverMoviesParams) _then) = _$DiscoverMoviesParamsCopyWithImpl;
 @useResult
 $Res call({
  List<int> genreIds, List<int> providerIds, double minRating, int releaseYear
@@ -56,14 +53,14 @@ $Res call({
 
 }
 /// @nodoc
-class _$RoomFiltersCopyWithImpl<$Res>
-    implements $RoomFiltersCopyWith<$Res> {
-  _$RoomFiltersCopyWithImpl(this._self, this._then);
+class _$DiscoverMoviesParamsCopyWithImpl<$Res>
+    implements $DiscoverMoviesParamsCopyWith<$Res> {
+  _$DiscoverMoviesParamsCopyWithImpl(this._self, this._then);
 
-  final RoomFilters _self;
-  final $Res Function(RoomFilters) _then;
+  final DiscoverMoviesParams _self;
+  final $Res Function(DiscoverMoviesParams) _then;
 
-/// Create a copy of RoomFilters
+/// Create a copy of DiscoverMoviesParams
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? releaseYear = null,}) {
   return _then(_self.copyWith(
@@ -78,8 +75,8 @@ as int,
 }
 
 
-/// Adds pattern-matching-related methods to [RoomFilters].
-extension RoomFiltersPatterns on RoomFilters {
+/// Adds pattern-matching-related methods to [DiscoverMoviesParams].
+extension DiscoverMoviesParamsPatterns on DiscoverMoviesParams {
 /// A variant of `map` that fallback to returning `orElse`.
 ///
 /// It is equivalent to doing:
@@ -92,10 +89,10 @@ extension RoomFiltersPatterns on RoomFilters {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _RoomFilters value)?  $default,{required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _DiscoverMoviesParams value)?  $default,{required TResult orElse(),}){
 final _that = this;
 switch (_that) {
-case _RoomFilters() when $default != null:
+case _DiscoverMoviesParams() when $default != null:
 return $default(_that);case _:
   return orElse();
 
@@ -114,10 +111,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _RoomFilters value)  $default,){
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _DiscoverMoviesParams value)  $default,){
 final _that = this;
 switch (_that) {
-case _RoomFilters():
+case _DiscoverMoviesParams():
 return $default(_that);case _:
   throw StateError('Unexpected subclass');
 
@@ -135,10 +132,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _RoomFilters value)?  $default,){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _DiscoverMoviesParams value)?  $default,){
 final _that = this;
 switch (_that) {
-case _RoomFilters() when $default != null:
+case _DiscoverMoviesParams() when $default != null:
 return $default(_that);case _:
   return null;
 
@@ -158,7 +155,7 @@ return $default(_that);case _:
 
 @optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
-case _RoomFilters() when $default != null:
+case _DiscoverMoviesParams() when $default != null:
 return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear);case _:
   return orElse();
 
@@ -179,7 +176,7 @@ return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYe
 
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear)  $default,) {final _that = this;
 switch (_that) {
-case _RoomFilters():
+case _DiscoverMoviesParams():
 return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear);case _:
   throw StateError('Unexpected subclass');
 
@@ -199,7 +196,7 @@ return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYe
 
 @optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear)?  $default,) {final _that = this;
 switch (_that) {
-case _RoomFilters() when $default != null:
+case _DiscoverMoviesParams() when $default != null:
 return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear);case _:
   return null;
 
@@ -209,11 +206,11 @@ return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYe
 }
 
 /// @nodoc
-@JsonSerializable()
 
-class _RoomFilters implements RoomFilters {
-  const _RoomFilters({final  List<int> genreIds = const <int>[], final  List<int> providerIds = const <int>[], this.minRating = 0, this.releaseYear = 2024}): _genreIds = genreIds,_providerIds = providerIds;
-  factory _RoomFilters.fromJson(Map<String, dynamic> json) => _$RoomFiltersFromJson(json);
+
+class _DiscoverMoviesParams implements DiscoverMoviesParams {
+  const _DiscoverMoviesParams({final  List<int> genreIds = const <int>[], final  List<int> providerIds = const <int>[], this.minRating = 0, required this.releaseYear}): _genreIds = genreIds,_providerIds = providerIds;
+  
 
  final  List<int> _genreIds;
 @override@JsonKey() List<int> get genreIds {
@@ -230,39 +227,36 @@ class _RoomFilters implements RoomFilters {
 }
 
 @override@JsonKey() final  double minRating;
-@override@JsonKey() final  int releaseYear;
+@override final  int releaseYear;
 
-/// Create a copy of RoomFilters
+/// Create a copy of DiscoverMoviesParams
 /// with the given fields replaced by the non-null parameter values.
 @override @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-_$RoomFiltersCopyWith<_RoomFilters> get copyWith => __$RoomFiltersCopyWithImpl<_RoomFilters>(this, _$identity);
+_$DiscoverMoviesParamsCopyWith<_DiscoverMoviesParams> get copyWith => __$DiscoverMoviesParamsCopyWithImpl<_DiscoverMoviesParams>(this, _$identity);
 
-@override
-Map<String, dynamic> toJson() {
-  return _$RoomFiltersToJson(this, );
-}
+
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RoomFilters&&const DeepCollectionEquality().equals(other._genreIds, _genreIds)&&const DeepCollectionEquality().equals(other._providerIds, _providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DiscoverMoviesParams&&const DeepCollectionEquality().equals(other._genreIds, _genreIds)&&const DeepCollectionEquality().equals(other._providerIds, _providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_genreIds),const DeepCollectionEquality().hash(_providerIds),minRating,releaseYear);
 
 @override
 String toString() {
-  return 'RoomFilters(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear)';
+  return 'DiscoverMoviesParams(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class _$RoomFiltersCopyWith<$Res> implements $RoomFiltersCopyWith<$Res> {
-  factory _$RoomFiltersCopyWith(_RoomFilters value, $Res Function(_RoomFilters) _then) = __$RoomFiltersCopyWithImpl;
+abstract mixin class _$DiscoverMoviesParamsCopyWith<$Res> implements $DiscoverMoviesParamsCopyWith<$Res> {
+  factory _$DiscoverMoviesParamsCopyWith(_DiscoverMoviesParams value, $Res Function(_DiscoverMoviesParams) _then) = __$DiscoverMoviesParamsCopyWithImpl;
 @override @useResult
 $Res call({
  List<int> genreIds, List<int> providerIds, double minRating, int releaseYear
@@ -273,17 +267,17 @@ $Res call({
 
 }
 /// @nodoc
-class __$RoomFiltersCopyWithImpl<$Res>
-    implements _$RoomFiltersCopyWith<$Res> {
-  __$RoomFiltersCopyWithImpl(this._self, this._then);
+class __$DiscoverMoviesParamsCopyWithImpl<$Res>
+    implements _$DiscoverMoviesParamsCopyWith<$Res> {
+  __$DiscoverMoviesParamsCopyWithImpl(this._self, this._then);
 
-  final _RoomFilters _self;
-  final $Res Function(_RoomFilters) _then;
+  final _DiscoverMoviesParams _self;
+  final $Res Function(_DiscoverMoviesParams) _then;
 
-/// Create a copy of RoomFilters
+/// Create a copy of DiscoverMoviesParams
 /// with the given fields replaced by the non-null parameter values.
 @override @pragma('vm:prefer-inline') $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? releaseYear = null,}) {
-  return _then(_RoomFilters(
+  return _then(_DiscoverMoviesParams(
 genreIds: null == genreIds ? _self._genreIds : genreIds // ignore: cast_nullable_to_non_nullable
 as List<int>,providerIds: null == providerIds ? _self._providerIds : providerIds // ignore: cast_nullable_to_non_nullable
 as List<int>,minRating: null == minRating ? _self.minRating : minRating // ignore: cast_nullable_to_non_nullable

@@ -6,9 +6,10 @@ part 'room_filters.g.dart';
 @freezed
 abstract class RoomFilters with _$RoomFilters {
   const factory RoomFilters({
-    @Default(<String>[]) List<String> genres,
-    @Default(<String>[]) List<String> streamingPlatforms,
+    @Default(<int>[]) List<int> genreIds,
+    @Default(<int>[]) List<int> providerIds,
     @Default(0) double minRating,
+    @Default(2024) int releaseYear,
   }) = _RoomFilters;
 
   factory RoomFilters.fromJson(Map<String, dynamic> json) =>

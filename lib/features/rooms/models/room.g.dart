@@ -37,7 +37,7 @@ Map<String, dynamic> _$RoomToJson(_Room instance) => <String, dynamic>{
   'status': instance.status,
   'members': instance.members,
   'memberCount': instance.memberCount,
-  'filters': instance.filters.toJson(),
+  'filters': instance.filters,
   'currentCardIndex': instance.currentCardIndex,
   'matches': instance.matches,
   'watchlist': instance.watchlist,

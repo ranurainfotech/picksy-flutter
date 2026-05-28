@@ -29,9 +29,10 @@ class RoomSetupState {
     required this.category,
     required this.roomName,
     required this.selectedMood,
-    required this.selectedGenres,
-    required this.selectedPlatforms,
+    required this.selectedGenreIds,
+    required this.selectedProviderIds,
     required this.minimumRating,
+    required this.releaseYear,
     this.errorMessage,
   });
 
@@ -40,18 +41,20 @@ class RoomSetupState {
       category: category,
       roomName: 'Saturday Night 🍿',
       selectedMood: roomMoodOptions.first.label,
-      selectedGenres: {'Action', 'Comedy'},
-      selectedPlatforms: {'Netflix', 'Prime Video'},
+      selectedGenreIds: const <int>{},
+      selectedProviderIds: const <int>{},
       minimumRating: 7,
+      releaseYear: DateTime.now().year,
     );
   }
 
   final RoomDecisionCategory category;
   final String roomName;
   final String selectedMood;
-  final Set<String> selectedGenres;
-  final Set<String> selectedPlatforms;
+  final Set<int> selectedGenreIds;
+  final Set<int> selectedProviderIds;
   final double minimumRating;
+  final int releaseYear;
   final String? errorMessage;
 
   RoomMoodOption get selectedMoodOption {
@@ -65,9 +68,10 @@ class RoomSetupState {
     RoomDecisionCategory? category,
     String? roomName,
     String? selectedMood,
-    Set<String>? selectedGenres,
-    Set<String>? selectedPlatforms,
+    Set<int>? selectedGenreIds,
+    Set<int>? selectedProviderIds,
     double? minimumRating,
+    int? releaseYear,
     String? errorMessage,
     bool clearError = false,
   }) {
@@ -75,9 +79,10 @@ class RoomSetupState {
       category: category ?? this.category,
       roomName: roomName ?? this.roomName,
       selectedMood: selectedMood ?? this.selectedMood,
-      selectedGenres: selectedGenres ?? this.selectedGenres,
-      selectedPlatforms: selectedPlatforms ?? this.selectedPlatforms,
+      selectedGenreIds: selectedGenreIds ?? this.selectedGenreIds,
+      selectedProviderIds: selectedProviderIds ?? this.selectedProviderIds,
       minimumRating: minimumRating ?? this.minimumRating,
+      releaseYear: releaseYear ?? this.releaseYear,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
   }
@@ -104,9 +109,10 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
     required RoomDecisionCategory category,
     required String roomName,
     required String mood,
-    required Set<String> genres,
-    required Set<String> platforms,
+    required Set<int> genreIds,
+    required Set<int> providerIds,
     required double minimumRating,
+    required int releaseYear,
   }) {
     final matchedMood = roomMoodOptions.firstWhere(
       (option) => mood.toLowerCase().contains(option.label.toLowerCase()),
@@ -117,9 +123,10 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
       category: category,
       roomName: roomName,
       selectedMood: matchedMood.label,
-      selectedGenres: genres,
-      selectedPlatforms: platforms,
+      selectedGenreIds: genreIds,
+      selectedProviderIds: providerIds,
       minimumRating: minimumRating.clamp(1, 10),
+      releaseYear: releaseYear,
     );
   }
 
@@ -131,24 +138,28 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
     state = state.copyWith(selectedMood: mood, clearError: true);
   }
 
-  void toggleGenre(String genre) {
-    final genres = Set<String>.from(state.selectedGenres);
-    if (!genres.add(genre)) {
-      genres.remove(genre);
+  void toggleGenreId(int genreId) {
+    final genres = Set<int>.from(state.selectedGenreIds);
+    if (!genres.add(genreId)) {
+      genres.remove(genreId);
     }
-    state = state.copyWith(selectedGenres: genres, clearError: true);
+    state = state.copyWith(selectedGenreIds: genres, clearError: true);
   }
 
-  void togglePlatform(String platform) {
-    final platforms = Set<String>.from(state.selectedPlatforms);
-    if (!platforms.add(platform)) {
-      platforms.remove(platform);
+  void toggleProviderId(int providerId) {
+    final providers = Set<int>.from(state.selectedProviderIds);
+    if (!providers.add(providerId)) {
+      providers.remove(providerId);
     }
-    state = state.copyWith(selectedPlatforms: platforms, clearError: true);
+    state = state.copyWith(selectedProviderIds: providers, clearError: true);
   }
 
   void updateMinimumRating(double rating) {
     state = state.copyWith(minimumRating: rating, clearError: true);
+  }
+
+  void updateReleaseYear(int year) {
+    state = state.copyWith(releaseYear: year, clearError: true);
   }
 
   void resetFilters() {
@@ -170,7 +181,7 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
       return false;
     }
 
-    if (state.selectedGenres.isEmpty) {
+    if (state.selectedGenreIds.isEmpty) {
       state = state.copyWith(errorMessage: 'Select at least one genre.');
       return false;
     }
@@ -212,9 +223,10 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
         members: [uid],
         memberCount: 1,
         filters: RoomFilters(
-          genres: formState.selectedGenres.toList()..sort(),
-          streamingPlatforms: formState.selectedPlatforms.toList()..sort(),
+          genreIds: formState.selectedGenreIds.toList()..sort(),
+          providerIds: formState.selectedProviderIds.toList()..sort(),
           minRating: formState.minimumRating,
+          releaseYear: formState.releaseYear,
         ),
       );
 
@@ -246,9 +258,10 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
             name: formState.roomName.trim(),
             mood: mood.displayLabel,
             filters: {
-              'genres': formState.selectedGenres.toList()..sort(),
-              'streamingPlatforms': formState.selectedPlatforms.toList()..sort(),
+              'genreIds': formState.selectedGenreIds.toList()..sort(),
+              'providerIds': formState.selectedProviderIds.toList()..sort(),
               'minRating': formState.minimumRating,
+              'releaseYear': formState.releaseYear,
             },
           );
 

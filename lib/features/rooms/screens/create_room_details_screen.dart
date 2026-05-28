@@ -6,6 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_design_system.dart';
 import '../../../routes/app_routes.dart';
+import '../../movies/domain/entities/streaming_provider.dart';
+import '../../movies/presentation/controllers/supported_providers.dart';
+import '../../movies/presentation/providers/movies_providers.dart';
 import '../providers/create_join_room_provider.dart';
 import '../providers/rooms_provider.dart';
 import '../providers/room_setup_provider.dart';
@@ -32,21 +35,6 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
   bool _hydratedFromRoom = false;
   bool _hydrateScheduled = false;
   bool _isSyncingRoomNameFromState = false;
-
-  static const List<String> _genres = [
-    'Action',
-    'Comedy',
-    'Sci-Fi',
-    'Horror',
-    'Drama',
-  ];
-
-  static const List<String> _platforms = [
-    'Netflix',
-    'Prime Video',
-    'Disney+',
-    'Apple TV+',
-  ];
 
   @override
   void initState() {
@@ -77,6 +65,8 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
   Widget build(BuildContext context) {
     final setupState = ref.watch(roomSetupProvider);
     final actionState = ref.watch(createRoomSetupActionProvider);
+    final genresAsync = ref.watch(genresProvider);
+    final providersAsync = ref.watch(streamingProvidersProvider);
     final editingRoomId = widget.editRoomId;
     final editingRoomAsync = editingRoomId == null
         ? null
@@ -111,22 +101,32 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
           }
 
           final filters = room['filters'] as Map<String, dynamic>? ?? const {};
-          final genres = Set<String>.from(
-            filters['genres'] as List? ?? const <String>[],
+          final genres = Set<int>.from(
+            (filters['genreIds'] as List? ?? const <dynamic>[])
+                .whereType<num>()
+                .map((value) => value.toInt()),
           );
-          final platforms = Set<String>.from(
-            filters['streamingPlatforms'] as List? ?? const <String>[],
+          final providers = Set<int>.from(
+            (filters['providerIds'] as List? ?? const <dynamic>[])
+                .whereType<num>()
+                .map((value) => value.toInt()),
           );
           final minRatingRaw = filters['minRating'];
           final minRating = minRatingRaw is num ? minRatingRaw.toDouble() : 7.0;
+          final releaseYearRaw = filters['releaseYear'];
+          final releaseYear = releaseYearRaw is num
+              ? releaseYearRaw.toInt()
+              : DateTime.now().year;
 
           setupNotifier.hydrateFromRoomData(
             category: widget.category,
             roomName: room['name'] as String? ?? setupState.roomName,
             mood: room['mood'] as String? ?? setupState.selectedMood,
-            genres: genres.isEmpty ? setupState.selectedGenres : genres,
-            platforms: platforms.isEmpty ? setupState.selectedPlatforms : platforms,
+            genreIds: genres.isEmpty ? setupState.selectedGenreIds : genres,
+            providerIds:
+                providers.isEmpty ? setupState.selectedProviderIds : providers,
             minimumRating: minRating,
+            releaseYear: releaseYear,
           );
 
           _hydratedFromRoom = true;
@@ -272,10 +272,23 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
                           title: 'Genres',
                         ),
                         const SizedBox(height: AppSpacing.small),
-                        _FilterChipWrap(
-                          options: _genres,
-                          selected: setupState.selectedGenres,
-                          onToggle: setupNotifier.toggleGenre,
+                        genresAsync.when(
+                          data: (genres) => _FilterChipWrap(
+                            options: genres
+                                .map(
+                                  (genre) => _FilterOption(
+                                    id: genre.id,
+                                    label: genre.name,
+                                  ),
+                                )
+                                .toList(growable: false),
+                            selected: setupState.selectedGenreIds,
+                            onToggle: setupNotifier.toggleGenreId,
+                          ),
+                          loading: () => const _FiltersLoading(),
+                          error: (error, stack) => const _FiltersErrorText(
+                            message: 'Could not load genres.',
+                          ),
                         ),
                         const SizedBox(
                           height: AppCreateRoomDetailsTokens.filterCardGap,
@@ -289,10 +302,45 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
                           title: 'Streaming Platform',
                         ),
                         const SizedBox(height: AppSpacing.small),
-                        _FilterChipWrap(
-                          options: _platforms,
-                          selected: setupState.selectedPlatforms,
-                          onToggle: setupNotifier.togglePlatform,
+                        providersAsync.when(
+                          data: (providers) {
+                            final providersById = {
+                              for (final provider in providers) provider.id: provider,
+                            };
+                            final indiaProviders = <StreamingProvider>[
+                              for (final id in indiaProviderIds)
+                                if (providersById.containsKey(id)) providersById[id]!,
+                            ];
+                            final usProviders = <StreamingProvider>[
+                              for (final id in usProviderIds)
+                                if (providersById.containsKey(id)) providersById[id]!,
+                            ];
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const _ProviderRegionLabel('Popular in India'),
+                                const SizedBox(height: 8),
+                                _ProviderChipsRow(
+                                  providers: indiaProviders,
+                                  selectedProviderIds: setupState.selectedProviderIds,
+                                  onToggle: setupNotifier.toggleProviderId,
+                                ),
+                                const SizedBox(height: 12),
+                                const _ProviderRegionLabel('Popular in US'),
+                                const SizedBox(height: 8),
+                                _ProviderChipsRow(
+                                  providers: usProviders,
+                                  selectedProviderIds: setupState.selectedProviderIds,
+                                  onToggle: setupNotifier.toggleProviderId,
+                                ),
+                              ],
+                            );
+                          },
+                          loading: () => const _FiltersLoading(),
+                          error: (error, stack) => const _FiltersErrorText(
+                            message: 'Could not load providers.',
+                          ),
                         ),
                         const SizedBox(
                           height: AppCreateRoomDetailsTokens.filterCardGap,
@@ -311,6 +359,19 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
                         _RatingSlider(
                           value: setupState.minimumRating,
                           onChanged: setupNotifier.updateMinimumRating,
+                        ),
+                        const SizedBox(
+                          height: AppCreateRoomDetailsTokens.filterCardGap,
+                        ),
+                        _InlineFilterSectionTitle(
+                          icon: '📅',
+                          title: 'Release Year',
+                          trailingValue: '${setupState.releaseYear}',
+                        ),
+                        const SizedBox(height: AppSpacing.small),
+                        _ReleaseYearSelector(
+                          selectedYear: setupState.releaseYear,
+                          onChanged: setupNotifier.updateReleaseYear,
                         ),
                         const SizedBox(
                           height: AppCreateRoomDetailsTokens.filterCardGap,
@@ -854,42 +915,32 @@ class _FilterChipWrap extends StatelessWidget {
     required this.onToggle,
   });
 
-  final List<String> options;
-  final Set<String> selected;
-  final ValueChanged<String> onToggle;
+  final List<_FilterOption> options;
+  final Set<int> selected;
+  final ValueChanged<int> onToggle;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: AppCreateRoomDetailsTokens.filterChipHeight + 14,
-      child: ShaderMask(
-        shaderCallback: (rect) {
-          return const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [Colors.transparent, Colors.black, Colors.black, Colors.transparent],
-            stops: [0, 0.06, 0.94, 1],
-          ).createShader(rect);
-        },
-        blendMode: BlendMode.dstIn,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-          itemCount: options.length,
-          separatorBuilder: (_, _) =>
-              const SizedBox(width: AppCreateRoomDetailsTokens.filterChipGap),
-          itemBuilder: (context, index) {
-            final option = options[index];
-            return _FilterOptionChip(
-              label: option,
-              selected: selected.contains(option),
-              onTap: () => onToggle(option),
-            );
-          },
-        ),
-      ),
+    return Wrap(
+      spacing: AppCreateRoomDetailsTokens.filterChipGap,
+      runSpacing: AppCreateRoomDetailsTokens.filterChipGap,
+      children: options
+          .map(
+            (option) => _FilterOptionChip(
+              label: option.label,
+              selected: selected.contains(option.id),
+              onTap: () => onToggle(option.id),
+            ),
+          )
+          .toList(growable: false),
     );
   }
+}
+
+class _FilterOption {
+  const _FilterOption({required this.id, required this.label});
+  final int id;
+  final String label;
 }
 
 class _FilterOptionChip extends StatelessWidget {
@@ -905,6 +956,7 @@ class _FilterOptionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const genreChipHeight = 30.0;
     const selectedBorderWidth = 1.1;
 
     return _TactileScale(
@@ -912,8 +964,7 @@ class _FilterOptionChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
-        height: AppCreateRoomDetailsTokens.filterChipHeight +
-            (selectedBorderWidth * 2),
+        height: genreChipHeight + (selectedBorderWidth * 2),
         padding: const EdgeInsets.all(selectedBorderWidth),
         decoration: BoxDecoration(
           gradient: selected
@@ -932,8 +983,8 @@ class _FilterOptionChip extends StatelessWidget {
               : null,
         ),
         child: Container(
-          height: AppCreateRoomDetailsTokens.filterChipHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          height: genreChipHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: AppCreateRoomDetailsTokens.filterChipUnselected,
             borderRadius: BorderRadius.circular(
@@ -954,21 +1005,241 @@ class _FilterOptionChip extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: AppTypography.primaryFont,
                   fontFamilyFallback: AppTypography.fallbackFonts,
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                   color: AppColors.primaryText,
                 ),
               ),
               if (selected) ...[
-                const SizedBox(width: AppSpacing.tiny),
+                const SizedBox(width: 4),
                 const Icon(
                   Icons.check_rounded,
-                  size: 14,
+                  size: 12,
                   color: AppColors.primaryText,
                 ),
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProviderChipsRow extends StatelessWidget {
+  const _ProviderChipsRow({
+    required this.providers,
+    required this.selectedProviderIds,
+    required this.onToggle,
+  });
+
+  final List<StreamingProvider> providers;
+  final Set<int> selectedProviderIds;
+  final ValueChanged<int> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppCreateRoomDetailsTokens.filterChipGap,
+      runSpacing: AppCreateRoomDetailsTokens.filterChipGap,
+      children: providers
+          .map(
+            (provider) => _ProviderChipCard(
+              provider: provider,
+              selected: selectedProviderIds.contains(provider.id),
+              onTap: () => onToggle(provider.id),
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+}
+
+class _ProviderRegionLabel extends StatelessWidget {
+  const _ProviderRegionLabel(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: TextStyle(
+        fontFamily: AppTypography.primaryFont,
+        fontFamilyFallback: AppTypography.fallbackFonts,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: Colors.white.withValues(alpha: 0.65),
+      ),
+    );
+  }
+}
+
+class _ProviderChipCard extends StatelessWidget {
+  const _ProviderChipCard({
+    required this.provider,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final StreamingProvider provider;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const providerChipHeight = 30.0;
+    const selectedBorderWidth = 1.1;
+    final logoUrl = provider.logoPath == null
+        ? null
+        : 'https://image.tmdb.org/t/p/w92/${provider.logoPath}';
+
+    return _TactileScale(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: providerChipHeight + (selectedBorderWidth * 2),
+        padding: const EdgeInsets.all(selectedBorderWidth),
+        decoration: BoxDecoration(
+          gradient: selected
+              ? AppCreateRoomDetailsTokens.selectedChipGradient
+              : null,
+          borderRadius: BorderRadius.circular(
+            AppCreateRoomDetailsTokens.filterChipRadius,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: AppColors.neonPink.withValues(alpha: 0.16),
+                    blurRadius: 10,
+                  ),
+                ]
+              : null,
+        ),
+        child: Container(
+          height: providerChipHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: AppCreateRoomDetailsTokens.filterChipUnselected,
+            borderRadius: BorderRadius.circular(
+              AppCreateRoomDetailsTokens.filterChipRadius,
+            ),
+            border: selected
+                ? null
+                : Border.all(
+                    color: AppColors.primaryBorder,
+                    width: selectedBorderWidth,
+                  ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (logoUrl != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    logoUrl,
+                    width: 16,
+                    height: 16,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.live_tv_rounded, size: 12),
+                  ),
+                )
+              else
+                const Icon(Icons.live_tv_rounded, size: 12),
+              const SizedBox(width: 6),
+              Text(
+                provider.name,
+                style: TextStyle(
+                  fontFamily: AppTypography.primaryFont,
+                  fontFamilyFallback: AppTypography.fallbackFonts,
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  color: AppColors.primaryText,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FiltersLoading extends StatelessWidget {
+  const _FiltersLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 52,
+      child: Center(
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
+  }
+}
+
+class _FiltersErrorText extends StatelessWidget {
+  const _FiltersErrorText({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      message,
+      style: AppTypography.caption.copyWith(color: AppColors.reject),
+    );
+  }
+}
+
+class _ReleaseYearSelector extends StatelessWidget {
+  const _ReleaseYearSelector({
+    required this.selectedYear,
+    required this.onChanged,
+  });
+
+  final int selectedYear;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentYear = DateTime.now().year;
+    final years = List<int>.generate(
+      currentYear - 1979,
+      (index) => currentYear - index,
+      growable: false,
+    );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppCreateRoomDetailsTokens.filterChipUnselected,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primaryBorder),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: years.contains(selectedYear) ? selectedYear : years.first,
+          dropdownColor: const Color(0xFF161A25),
+          borderRadius: BorderRadius.circular(12),
+          iconEnabledColor: AppColors.neonPink,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          items: years
+              .map(
+                (year) => DropdownMenuItem<int>(
+                  value: year,
+                  child: Text(
+                    '$year',
+                    style: const TextStyle(color: AppColors.primaryText),
+                  ),
+                ),
+              )
+              .toList(growable: false),
+          onChanged: (value) {
+            if (value != null) {
+              onChanged(value);
+            }
+          },
         ),
       ),
     );
