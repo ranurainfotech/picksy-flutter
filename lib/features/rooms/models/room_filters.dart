@@ -9,7 +9,8 @@ abstract class RoomFilters with _$RoomFilters {
     @Default(<int>[]) List<int> genreIds,
     @Default(<int>[]) List<int> providerIds,
     @Default(0) double minRating,
-    @Default(2024) int releaseYear,
+    @Default(0) int releaseYear,
+    @Default('popularity.desc') String sortBy,
   }) = _RoomFilters;
 
   factory RoomFilters.fromJson(Map<String, dynamic> json) =>

@@ -55,5 +55,6 @@ Future<List<Movie>> discoverMovies(Ref ref, DiscoverMoviesParams params) {
         providerIds: params.providerIds,
         minRating: params.minRating,
         releaseYear: params.releaseYear,
+        sortBy: params.sortBy,
       );
 }

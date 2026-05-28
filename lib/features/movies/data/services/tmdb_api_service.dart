@@ -15,17 +15,17 @@ abstract class TmdbApiService {
   Future<GenresResponseDto> getGenres();
 
   @GET('/watch/providers/movie')
-  Future<ProvidersResponseDto> getWatchProviders({
-    @Query('watch_region') String watchRegion = 'US',
-  });
+  Future<ProvidersResponseDto> getWatchProviders();
 
   @GET('/discover/movie')
   Future<DiscoverMoviesResponseDto> discoverMovies({
     @Query('with_genres') required String withGenres,
     @Query('vote_average.gte') required double voteAverageGte,
-    @Query('primary_release_year') required int primaryReleaseYear,
+    @Query('primary_release_date.gte') required String primaryReleaseDateGte,
+    @Query('primary_release_date.lte') String? primaryReleaseDateLte,
     @Query('with_watch_providers') String? withWatchProviders,
-    @Query('watch_region') String? watchRegion,
+    @Query('watch_region') String watchRegion = 'IN',
+    @Query('page') int page = 1,
     @Query('sort_by') String sortBy = 'popularity.desc',
   });
 }

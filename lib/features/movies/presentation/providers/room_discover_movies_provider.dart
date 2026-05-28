@@ -22,6 +22,7 @@ final roomDiscoverMoviesProvider = FutureProvider.autoDispose
         genreIds: filters.genreIds,
         providerIds: filters.providerIds,
         minRating: filters.minRating,
+        sortBy: filters.sortBy,
         releaseYear: filters.releaseYear,
       );
 

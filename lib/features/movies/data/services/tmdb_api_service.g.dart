@@ -47,11 +47,9 @@ class _TmdbApiService implements TmdbApiService {
   }
 
   @override
-  Future<ProvidersResponseDto> getWatchProviders({
-    String watchRegion = 'US',
-  }) async {
+  Future<ProvidersResponseDto> getWatchProviders() async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{r'watch_region': watchRegion};
+    final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<ProvidersResponseDto>(
@@ -79,18 +77,22 @@ class _TmdbApiService implements TmdbApiService {
   Future<DiscoverMoviesResponseDto> discoverMovies({
     required String withGenres,
     required double voteAverageGte,
-    required int primaryReleaseYear,
+    required String primaryReleaseDateGte,
+    String? primaryReleaseDateLte,
     String? withWatchProviders,
-    String? watchRegion,
+    String watchRegion = 'IN',
+    int page = 1,
     String sortBy = 'popularity.desc',
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'with_genres': withGenres,
       r'vote_average.gte': voteAverageGte,
-      r'primary_release_year': primaryReleaseYear,
+      r'primary_release_date.gte': primaryReleaseDateGte,
+      r'primary_release_date.lte': primaryReleaseDateLte,
       r'with_watch_providers': withWatchProviders,
       r'watch_region': watchRegion,
+      r'page': page,
       r'sort_by': sortBy,
     };
     queryParameters.removeWhere((k, v) => v == null);

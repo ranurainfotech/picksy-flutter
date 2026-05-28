@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$RoomFilters {
 
- List<int> get genreIds; List<int> get providerIds; double get minRating; int get releaseYear;
+ List<int> get genreIds; List<int> get providerIds; double get minRating; int get releaseYear; String get sortBy;
 /// Create a copy of RoomFilters
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $RoomFiltersCopyWith<RoomFilters> get copyWith => _$RoomFiltersCopyWithImpl<Room
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RoomFilters&&const DeepCollectionEquality().equals(other.genreIds, genreIds)&&const DeepCollectionEquality().equals(other.providerIds, providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RoomFilters&&const DeepCollectionEquality().equals(other.genreIds, genreIds)&&const DeepCollectionEquality().equals(other.providerIds, providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear)&&(identical(other.sortBy, sortBy) || other.sortBy == sortBy));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(genreIds),const DeepCollectionEquality().hash(providerIds),minRating,releaseYear);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(genreIds),const DeepCollectionEquality().hash(providerIds),minRating,releaseYear,sortBy);
 
 @override
 String toString() {
-  return 'RoomFilters(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear)';
+  return 'RoomFilters(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear, sortBy: $sortBy)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $RoomFiltersCopyWith<$Res>  {
   factory $RoomFiltersCopyWith(RoomFilters value, $Res Function(RoomFilters) _then) = _$RoomFiltersCopyWithImpl;
 @useResult
 $Res call({
- List<int> genreIds, List<int> providerIds, double minRating, int releaseYear
+ List<int> genreIds, List<int> providerIds, double minRating, int releaseYear, String sortBy
 });
 
 
@@ -65,13 +65,14 @@ class _$RoomFiltersCopyWithImpl<$Res>
 
 /// Create a copy of RoomFilters
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? releaseYear = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? releaseYear = null,Object? sortBy = null,}) {
   return _then(_self.copyWith(
 genreIds: null == genreIds ? _self.genreIds : genreIds // ignore: cast_nullable_to_non_nullable
 as List<int>,providerIds: null == providerIds ? _self.providerIds : providerIds // ignore: cast_nullable_to_non_nullable
 as List<int>,minRating: null == minRating ? _self.minRating : minRating // ignore: cast_nullable_to_non_nullable
 as double,releaseYear: null == releaseYear ? _self.releaseYear : releaseYear // ignore: cast_nullable_to_non_nullable
-as int,
+as int,sortBy: null == sortBy ? _self.sortBy : sortBy // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -156,10 +157,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear,  String sortBy)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RoomFilters() when $default != null:
-return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear);case _:
+return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear,_that.sortBy);case _:
   return orElse();
 
 }
@@ -177,10 +178,10 @@ return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYe
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear,  String sortBy)  $default,) {final _that = this;
 switch (_that) {
 case _RoomFilters():
-return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear);case _:
+return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear,_that.sortBy);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -197,10 +198,10 @@ return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYe
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear,  String sortBy)?  $default,) {final _that = this;
 switch (_that) {
 case _RoomFilters() when $default != null:
-return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear);case _:
+return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear,_that.sortBy);case _:
   return null;
 
 }
@@ -212,7 +213,7 @@ return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYe
 @JsonSerializable()
 
 class _RoomFilters implements RoomFilters {
-  const _RoomFilters({final  List<int> genreIds = const <int>[], final  List<int> providerIds = const <int>[], this.minRating = 0, this.releaseYear = 2024}): _genreIds = genreIds,_providerIds = providerIds;
+  const _RoomFilters({final  List<int> genreIds = const <int>[], final  List<int> providerIds = const <int>[], this.minRating = 0, this.releaseYear = 0, this.sortBy = 'popularity.desc'}): _genreIds = genreIds,_providerIds = providerIds;
   factory _RoomFilters.fromJson(Map<String, dynamic> json) => _$RoomFiltersFromJson(json);
 
  final  List<int> _genreIds;
@@ -231,6 +232,7 @@ class _RoomFilters implements RoomFilters {
 
 @override@JsonKey() final  double minRating;
 @override@JsonKey() final  int releaseYear;
+@override@JsonKey() final  String sortBy;
 
 /// Create a copy of RoomFilters
 /// with the given fields replaced by the non-null parameter values.
@@ -245,16 +247,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RoomFilters&&const DeepCollectionEquality().equals(other._genreIds, _genreIds)&&const DeepCollectionEquality().equals(other._providerIds, _providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RoomFilters&&const DeepCollectionEquality().equals(other._genreIds, _genreIds)&&const DeepCollectionEquality().equals(other._providerIds, _providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear)&&(identical(other.sortBy, sortBy) || other.sortBy == sortBy));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_genreIds),const DeepCollectionEquality().hash(_providerIds),minRating,releaseYear);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_genreIds),const DeepCollectionEquality().hash(_providerIds),minRating,releaseYear,sortBy);
 
 @override
 String toString() {
-  return 'RoomFilters(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear)';
+  return 'RoomFilters(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear, sortBy: $sortBy)';
 }
 
 
@@ -265,7 +267,7 @@ abstract mixin class _$RoomFiltersCopyWith<$Res> implements $RoomFiltersCopyWith
   factory _$RoomFiltersCopyWith(_RoomFilters value, $Res Function(_RoomFilters) _then) = __$RoomFiltersCopyWithImpl;
 @override @useResult
 $Res call({
- List<int> genreIds, List<int> providerIds, double minRating, int releaseYear
+ List<int> genreIds, List<int> providerIds, double minRating, int releaseYear, String sortBy
 });
 
 
@@ -282,13 +284,14 @@ class __$RoomFiltersCopyWithImpl<$Res>
 
 /// Create a copy of RoomFilters
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? releaseYear = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? releaseYear = null,Object? sortBy = null,}) {
   return _then(_RoomFilters(
 genreIds: null == genreIds ? _self._genreIds : genreIds // ignore: cast_nullable_to_non_nullable
 as List<int>,providerIds: null == providerIds ? _self._providerIds : providerIds // ignore: cast_nullable_to_non_nullable
 as List<int>,minRating: null == minRating ? _self.minRating : minRating // ignore: cast_nullable_to_non_nullable
 as double,releaseYear: null == releaseYear ? _self.releaseYear : releaseYear // ignore: cast_nullable_to_non_nullable
-as int,
+as int,sortBy: null == sortBy ? _self.sortBy : sortBy // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 

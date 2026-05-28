@@ -7,21 +7,40 @@ import 'create_join_room_provider.dart';
 import 'room_repository_provider.dart';
 
 class RoomMoodOption {
-  const RoomMoodOption({required this.emoji, required this.label});
+  const RoomMoodOption({
+    required this.emoji,
+    required this.label,
+    required this.tmdbSortBy,
+  });
 
   final String emoji;
   final String label;
+  final String tmdbSortBy;
 
   String get displayLabel => '$label $emoji';
 }
 
 const roomMoodOptions = <RoomMoodOption>[
-  RoomMoodOption(emoji: '😊', label: 'Chill'),
-  RoomMoodOption(emoji: '⚡', label: 'Hype'),
-  RoomMoodOption(emoji: '🍷', label: 'Fancy'),
-  RoomMoodOption(emoji: '💸', label: 'Budget'),
-  RoomMoodOption(emoji: '💖', label: 'Romantic'),
-  RoomMoodOption(emoji: '😈', label: 'Chaos'),
+  RoomMoodOption(
+    emoji: '🔥',
+    label: 'Popular',
+    tmdbSortBy: 'popularity.desc',
+  ),
+  RoomMoodOption(
+    emoji: '🏆',
+    label: 'Top Rated',
+    tmdbSortBy: 'vote_average.desc',
+  ),
+  RoomMoodOption(
+    emoji: '📈',
+    label: 'Trending',
+    tmdbSortBy: 'vote_count.desc',
+  ),
+  RoomMoodOption(
+    emoji: '🆕',
+    label: 'New Releases',
+    tmdbSortBy: 'primary_release_date.desc',
+  ),
 ];
 
 class RoomSetupState {
@@ -33,6 +52,7 @@ class RoomSetupState {
     required this.selectedProviderIds,
     required this.minimumRating,
     required this.releaseYear,
+    required this.selectedSortBy,
     this.errorMessage,
   });
 
@@ -44,7 +64,8 @@ class RoomSetupState {
       selectedGenreIds: const <int>{},
       selectedProviderIds: const <int>{},
       minimumRating: 7,
-      releaseYear: DateTime.now().year,
+      releaseYear: 0,
+      selectedSortBy: roomMoodOptions.first.tmdbSortBy,
     );
   }
 
@@ -55,6 +76,7 @@ class RoomSetupState {
   final Set<int> selectedProviderIds;
   final double minimumRating;
   final int releaseYear;
+  final String selectedSortBy;
   final String? errorMessage;
 
   RoomMoodOption get selectedMoodOption {
@@ -72,6 +94,7 @@ class RoomSetupState {
     Set<int>? selectedProviderIds,
     double? minimumRating,
     int? releaseYear,
+    String? selectedSortBy,
     String? errorMessage,
     bool clearError = false,
   }) {
@@ -83,6 +106,7 @@ class RoomSetupState {
       selectedProviderIds: selectedProviderIds ?? this.selectedProviderIds,
       minimumRating: minimumRating ?? this.minimumRating,
       releaseYear: releaseYear ?? this.releaseYear,
+      selectedSortBy: selectedSortBy ?? this.selectedSortBy,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
   }
@@ -113,20 +137,30 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
     required Set<int> providerIds,
     required double minimumRating,
     required int releaseYear,
+    required String sortBy,
   }) {
     final matchedMood = roomMoodOptions.firstWhere(
       (option) => mood.toLowerCase().contains(option.label.toLowerCase()),
-      orElse: () => roomMoodOptions.first,
+      orElse: () => const RoomMoodOption(
+        emoji: '',
+        label: '',
+        tmdbSortBy: '',
+      ),
+    );
+    final matchedSortBy = roomMoodOptions.firstWhere(
+      (option) => option.tmdbSortBy == sortBy,
+      orElse: () => matchedMood,
     );
 
     state = RoomSetupState(
       category: category,
       roomName: roomName,
-      selectedMood: matchedMood.label,
+      selectedMood: matchedSortBy.label,
       selectedGenreIds: genreIds,
       selectedProviderIds: providerIds,
-      minimumRating: minimumRating.clamp(1, 10),
+      minimumRating: minimumRating.clamp(0, 10),
       releaseYear: releaseYear,
+      selectedSortBy: matchedSortBy.tmdbSortBy,
     );
   }
 
@@ -135,7 +169,15 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
   }
 
   void selectMood(String mood) {
-    state = state.copyWith(selectedMood: mood, clearError: true);
+    final selected = roomMoodOptions.firstWhere(
+      (option) => option.label == mood,
+      orElse: () => roomMoodOptions.first,
+    );
+    state = state.copyWith(
+      selectedMood: selected.label,
+      selectedSortBy: selected.tmdbSortBy,
+      clearError: true,
+    );
   }
 
   void toggleGenreId(int genreId) {
@@ -144,6 +186,13 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
       genres.remove(genreId);
     }
     state = state.copyWith(selectedGenreIds: genres, clearError: true);
+  }
+
+  void setSelectedGenreIds(Set<int> genreIds) {
+    state = state.copyWith(
+      selectedGenreIds: Set<int>.from(genreIds),
+      clearError: true,
+    );
   }
 
   void toggleProviderId(int providerId) {
@@ -181,8 +230,8 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
       return false;
     }
 
-    if (state.selectedGenreIds.isEmpty) {
-      state = state.copyWith(errorMessage: 'Select at least one genre.');
+    if (state.selectedMood.trim().isEmpty || state.selectedSortBy.trim().isEmpty) {
+      state = state.copyWith(errorMessage: 'Choose the mood to continue.');
       return false;
     }
 
@@ -211,7 +260,9 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
     try {
       final uid = _requireUid();
       final formState = ref.read(roomSetupProvider);
-      final mood = formState.selectedMoodOption;
+      final mood = roomMoodOptions.firstWhere(
+        (option) => option.label == formState.selectedMood,
+      );
 
       final room = Room(
         id: '',
@@ -227,6 +278,7 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
           providerIds: formState.selectedProviderIds.toList()..sort(),
           minRating: formState.minimumRating,
           releaseYear: formState.releaseYear,
+          sortBy: formState.selectedSortBy,
         ),
       );
 
@@ -251,7 +303,9 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
 
     try {
       final formState = ref.read(roomSetupProvider);
-      final mood = formState.selectedMoodOption;
+      final mood = roomMoodOptions.firstWhere(
+        (option) => option.label == formState.selectedMood,
+      );
 
       await ref.read(roomRepositoryProvider).updateRoomSetup(
             roomId: roomId,
@@ -262,6 +316,7 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
               'providerIds': formState.selectedProviderIds.toList()..sort(),
               'minRating': formState.minimumRating,
               'releaseYear': formState.releaseYear,
+              'sortBy': formState.selectedSortBy,
             },
           );
 

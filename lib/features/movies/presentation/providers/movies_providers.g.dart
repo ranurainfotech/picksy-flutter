@@ -318,7 +318,7 @@ final class DiscoverMoviesProvider
   }
 }
 
-String _$discoverMoviesHash() => r'08fbc7fa171c9dfd0fb06ae4afebdb9c283042ea';
+String _$discoverMoviesHash() => r'a127af8fb073b6b93098a2b6b1ebad724c3d943e';
 
 final class DiscoverMoviesFamily extends $Family
     with

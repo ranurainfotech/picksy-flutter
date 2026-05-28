@@ -8,6 +8,13 @@ abstract final class AppRoutes {
   static const roomLobbyPattern = '/rooms/:roomId';
   static const roomSwipePattern = '/rooms/:roomId/swipe';
 
-  static String roomLobby(String roomId) => '/rooms/$roomId';
+  static String roomLobby(String roomId, {bool fromSwipe = false}) {
+    final base = '/rooms/$roomId';
+    if (!fromSwipe) {
+      return base;
+    }
+    return '$base?fromSwipe=1';
+  }
+
   static String roomSwipe(String roomId) => '/rooms/$roomId/swipe';
 }

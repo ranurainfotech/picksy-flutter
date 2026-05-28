@@ -23,11 +23,13 @@ GoRouter createAppRouter(WidgetRef ref) {
         return currentUser == null ? AppRoutes.welcome : AppRoutes.home;
       }
 
-      if (currentUser != null && (path == AppRoutes.welcome || path == AppRoutes.onboarding)) {
+      if (currentUser != null &&
+          (path == AppRoutes.welcome || path == AppRoutes.onboarding)) {
         return AppRoutes.home;
       }
 
-      if (currentUser == null && (path == AppRoutes.home || path.startsWith('/rooms/'))) {
+      if (currentUser == null &&
+          (path == AppRoutes.home || path.startsWith('/rooms/'))) {
         return AppRoutes.welcome;
       }
 
@@ -41,12 +43,18 @@ GoRouter createAppRouter(WidgetRef ref) {
           return currentUser == null ? AppRoutes.welcome : AppRoutes.home;
         },
       ),
-      GoRoute(path: AppRoutes.welcome, builder: (context, state) => const WelcomeScreen()),
+      GoRoute(
+        path: AppRoutes.welcome,
+        builder: (context, state) => const WelcomeScreen(),
+      ),
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => const NicknameAvatarScreen(),
       ),
-      GoRoute(path: AppRoutes.home, builder: (context, state) => const HomeShell()),
+      GoRoute(
+        path: AppRoutes.home,
+        builder: (context, state) => const HomeShell(),
+      ),
       GoRoute(
         path: AppRoutes.createJoinRoom,
         builder: (context, state) => const CreateJoinRoomScreen(),
@@ -80,7 +88,11 @@ GoRouter createAppRouter(WidgetRef ref) {
         path: AppRoutes.roomLobbyPattern,
         builder: (context, state) {
           final roomId = state.pathParameters['roomId']!;
-          return RoomLobbyScreen(roomId: roomId);
+          final fromSwipe = state.uri.queryParameters['fromSwipe'] == '1';
+          return RoomLobbyScreen(
+            roomId: roomId,
+            suppressAutoRedirectToSwipe: fromSwipe,
+          );
         },
       ),
       GoRoute(

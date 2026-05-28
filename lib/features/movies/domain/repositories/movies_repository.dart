@@ -10,5 +10,7 @@ abstract class MoviesRepository {
     required List<int> providerIds,
     required double minRating,
     required int releaseYear,
+    String sortBy = 'popularity.desc',
+    int page = 1,
   });
 }

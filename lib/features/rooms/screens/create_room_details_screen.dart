@@ -35,6 +35,13 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
   bool _hydratedFromRoom = false;
   bool _hydrateScheduled = false;
   bool _isSyncingRoomNameFromState = false;
+  bool _defaultGenresApplied = false;
+  static const Set<String> _defaultGenreNames = {
+    'animation',
+    'comedy',
+    'horror',
+    'drama',
+  };
 
   @override
   void initState() {
@@ -116,7 +123,11 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
           final releaseYearRaw = filters['releaseYear'];
           final releaseYear = releaseYearRaw is num
               ? releaseYearRaw.toInt()
-              : DateTime.now().year;
+              : setupState.releaseYear;
+          final sortByRaw = filters['sortBy'];
+          final sortBy = sortByRaw is String && sortByRaw.isNotEmpty
+              ? sortByRaw
+              : setupState.selectedSortBy;
 
           setupNotifier.hydrateFromRoomData(
             category: widget.category,
@@ -127,10 +138,42 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
                 providers.isEmpty ? setupState.selectedProviderIds : providers,
             minimumRating: minRating,
             releaseYear: releaseYear,
+            sortBy: sortBy,
           );
 
           _hydratedFromRoom = true;
           _hydrateScheduled = false;
+        });
+      });
+    }
+
+    if (editingRoomId == null &&
+        !_defaultGenresApplied &&
+        setupState.selectedGenreIds.isEmpty) {
+      genresAsync.whenData((genres) {
+        if (!mounted ||
+            _defaultGenresApplied ||
+            ref.read(roomSetupProvider).selectedGenreIds.isNotEmpty) {
+          return;
+        }
+        final matched = genres
+            .where(
+              (genre) => _defaultGenreNames.contains(
+                genre.name.trim().toLowerCase(),
+              ),
+            )
+            .map((genre) => genre.id)
+            .toSet();
+        if (matched.isEmpty) {
+          _defaultGenresApplied = true;
+          return;
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _defaultGenresApplied) {
+            return;
+          }
+          ref.read(roomSetupProvider.notifier).setSelectedGenreIds(matched);
+          _defaultGenresApplied = true;
         });
       });
     }
@@ -352,8 +395,9 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
                         _InlineFilterSectionTitle(
                           icon: '⭐',
                           title: 'Minimum Rating',
-                          trailingValue:
-                              '${setupState.minimumRating.toStringAsFixed(1)}+',
+                          trailingValue: setupState.minimumRating <= 0
+                              ? 'Any'
+                              : '${setupState.minimumRating.toStringAsFixed(1)}+',
                         ),
                         const SizedBox(height: AppSpacing.small),
                         _RatingSlider(
@@ -366,7 +410,9 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
                         _InlineFilterSectionTitle(
                           icon: '📅',
                           title: 'Release Year',
-                          trailingValue: '${setupState.releaseYear}',
+                          trailingValue: setupState.releaseYear <= 0
+                              ? 'Any'
+                              : '${setupState.releaseYear}',
                         ),
                         const SizedBox(height: AppSpacing.small),
                         _ReleaseYearSelector(
@@ -1210,36 +1256,48 @@ class _ReleaseYearSelector extends StatelessWidget {
       (index) => currentYear - index,
       growable: false,
     );
+    final selectedValue = years.contains(selectedYear) ? selectedYear : 0;
+    final dropdownValues = <int>[0, ...years];
 
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppCreateRoomDetailsTokens.filterChipUnselected,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.primaryBorder),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
-          value: years.contains(selectedYear) ? selectedYear : years.first,
-          dropdownColor: const Color(0xFF161A25),
-          borderRadius: BorderRadius.circular(12),
-          iconEnabledColor: AppColors.neonPink,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          items: years
-              .map(
-                (year) => DropdownMenuItem<int>(
-                  value: year,
-                  child: Text(
-                    '$year',
-                    style: const TextStyle(color: AppColors.primaryText),
+      child: SizedBox(
+        height: 46,
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<int>(
+            value: selectedValue,
+            dropdownColor: const Color(0xFF161A25),
+            borderRadius: BorderRadius.circular(12),
+            isDense: true,
+            isExpanded: true,
+            menuMaxHeight: 260,
+            iconEnabledColor: AppColors.neonPink,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+            items: dropdownValues
+                .map(
+                  (year) => DropdownMenuItem<int>(
+                    value: year,
+                    child: Text(
+                      year == 0 ? 'Any year' : '$year',
+                      style: const TextStyle(
+                        color: AppColors.primaryText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
-                ),
-              )
-              .toList(growable: false),
-          onChanged: (value) {
-            if (value != null) {
-              onChanged(value);
-            }
-          },
+                )
+                .toList(growable: false),
+            onChanged: (value) {
+              if (value != null) {
+                onChanged(value);
+              }
+            },
+          ),
         ),
       ),
     );

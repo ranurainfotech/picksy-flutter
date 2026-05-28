@@ -13,6 +13,8 @@ class TmdbMoviesRepository implements MoviesRepository {
 
   final TmdbApiService _api;
   final MoviesCacheStore _cacheStore;
+  static const _defaultReleaseDateUpperBound = '2100-12-31';
+  static const _defaultReleaseDateLowerBound = '1900-01-01';
 
   @override
   Future<List<Genre>> getGenres() async {
@@ -49,17 +51,11 @@ class TmdbMoviesRepository implements MoviesRepository {
           .toList(growable: false);
     }
 
-    final responses = await Future.wait([
-      _api.getWatchProviders(watchRegion: 'IN'),
-      _api.getWatchProviders(watchRegion: 'US'),
-    ]);
-
     final byId = <int, StreamingProviderDto>{};
-    for (final response in responses) {
-      for (final provider in response.results) {
-        if (supportedProviderIds.contains(provider.providerId)) {
-          byId[provider.providerId] = provider;
-        }
+    final response = await _api.getWatchProviders();
+    for (final provider in response.results) {
+      if (supportedProviderIds.contains(provider.providerId)) {
+        byId[provider.providerId] = provider;
       }
     }
 
@@ -90,35 +86,26 @@ class TmdbMoviesRepository implements MoviesRepository {
     required List<int> providerIds,
     required double minRating,
     required int releaseYear,
+    String sortBy = 'popularity.desc',
+    int page = 1,
   }) async {
     if (genreIds.isEmpty) {
       return const <Movie>[];
     }
 
-    final responses = providerIds.isEmpty
-        ? [
-            await _api.discoverMovies(
-              withGenres: genreIds.join(','),
-              voteAverageGte: minRating,
-              primaryReleaseYear: releaseYear,
-            ),
-          ]
-        : await Future.wait([
-            _api.discoverMovies(
-              withGenres: genreIds.join(','),
-              voteAverageGte: minRating,
-              primaryReleaseYear: releaseYear,
-              withWatchProviders: providerIds.join('|'),
-              watchRegion: 'IN',
-            ),
-            _api.discoverMovies(
-              withGenres: genreIds.join(','),
-              voteAverageGte: minRating,
-              primaryReleaseYear: releaseYear,
-              withWatchProviders: providerIds.join('|'),
-              watchRegion: 'US',
-            ),
-          ]);
+    final responses = [
+      await _api.discoverMovies(
+        withGenres: genreIds.join(','),
+        voteAverageGte: minRating,
+        primaryReleaseDateGte: releaseYear > 0
+            ? '$releaseYear-01-01'
+            : _defaultReleaseDateLowerBound,
+        primaryReleaseDateLte: _defaultReleaseDateUpperBound,
+        withWatchProviders: providerIds.isEmpty ? null : providerIds.join('|'),
+        sortBy: sortBy,
+        page: page,
+      ),
+    ];
 
     final byMovieId = <int, Movie>{};
     for (final response in responses) {

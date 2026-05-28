@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DiscoverMoviesParams {
 
- List<int> get genreIds; List<int> get providerIds; double get minRating; int get releaseYear;
+ List<int> get genreIds; List<int> get providerIds; double get minRating; String get sortBy; int get releaseYear;
 /// Create a copy of DiscoverMoviesParams
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $DiscoverMoviesParamsCopyWith<DiscoverMoviesParams> get copyWith => _$DiscoverMo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DiscoverMoviesParams&&const DeepCollectionEquality().equals(other.genreIds, genreIds)&&const DeepCollectionEquality().equals(other.providerIds, providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DiscoverMoviesParams&&const DeepCollectionEquality().equals(other.genreIds, genreIds)&&const DeepCollectionEquality().equals(other.providerIds, providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.sortBy, sortBy) || other.sortBy == sortBy)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(genreIds),const DeepCollectionEquality().hash(providerIds),minRating,releaseYear);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(genreIds),const DeepCollectionEquality().hash(providerIds),minRating,sortBy,releaseYear);
 
 @override
 String toString() {
-  return 'DiscoverMoviesParams(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear)';
+  return 'DiscoverMoviesParams(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, sortBy: $sortBy, releaseYear: $releaseYear)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $DiscoverMoviesParamsCopyWith<$Res>  {
   factory $DiscoverMoviesParamsCopyWith(DiscoverMoviesParams value, $Res Function(DiscoverMoviesParams) _then) = _$DiscoverMoviesParamsCopyWithImpl;
 @useResult
 $Res call({
- List<int> genreIds, List<int> providerIds, double minRating, int releaseYear
+ List<int> genreIds, List<int> providerIds, double minRating, String sortBy, int releaseYear
 });
 
 
@@ -62,12 +62,13 @@ class _$DiscoverMoviesParamsCopyWithImpl<$Res>
 
 /// Create a copy of DiscoverMoviesParams
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? releaseYear = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? sortBy = null,Object? releaseYear = null,}) {
   return _then(_self.copyWith(
 genreIds: null == genreIds ? _self.genreIds : genreIds // ignore: cast_nullable_to_non_nullable
 as List<int>,providerIds: null == providerIds ? _self.providerIds : providerIds // ignore: cast_nullable_to_non_nullable
 as List<int>,minRating: null == minRating ? _self.minRating : minRating // ignore: cast_nullable_to_non_nullable
-as double,releaseYear: null == releaseYear ? _self.releaseYear : releaseYear // ignore: cast_nullable_to_non_nullable
+as double,sortBy: null == sortBy ? _self.sortBy : sortBy // ignore: cast_nullable_to_non_nullable
+as String,releaseYear: null == releaseYear ? _self.releaseYear : releaseYear // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }
@@ -153,10 +154,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  String sortBy,  int releaseYear)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DiscoverMoviesParams() when $default != null:
-return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear);case _:
+return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.sortBy,_that.releaseYear);case _:
   return orElse();
 
 }
@@ -174,10 +175,10 @@ return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYe
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  String sortBy,  int releaseYear)  $default,) {final _that = this;
 switch (_that) {
 case _DiscoverMoviesParams():
-return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear);case _:
+return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.sortBy,_that.releaseYear);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -194,10 +195,10 @@ return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYe
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<int> genreIds,  List<int> providerIds,  double minRating,  String sortBy,  int releaseYear)?  $default,) {final _that = this;
 switch (_that) {
 case _DiscoverMoviesParams() when $default != null:
-return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear);case _:
+return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.sortBy,_that.releaseYear);case _:
   return null;
 
 }
@@ -209,7 +210,7 @@ return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYe
 
 
 class _DiscoverMoviesParams implements DiscoverMoviesParams {
-  const _DiscoverMoviesParams({final  List<int> genreIds = const <int>[], final  List<int> providerIds = const <int>[], this.minRating = 0, required this.releaseYear}): _genreIds = genreIds,_providerIds = providerIds;
+  const _DiscoverMoviesParams({final  List<int> genreIds = const <int>[], final  List<int> providerIds = const <int>[], this.minRating = 0, this.sortBy = 'popularity.desc', required this.releaseYear}): _genreIds = genreIds,_providerIds = providerIds;
   
 
  final  List<int> _genreIds;
@@ -227,6 +228,7 @@ class _DiscoverMoviesParams implements DiscoverMoviesParams {
 }
 
 @override@JsonKey() final  double minRating;
+@override@JsonKey() final  String sortBy;
 @override final  int releaseYear;
 
 /// Create a copy of DiscoverMoviesParams
@@ -239,16 +241,16 @@ _$DiscoverMoviesParamsCopyWith<_DiscoverMoviesParams> get copyWith => __$Discove
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DiscoverMoviesParams&&const DeepCollectionEquality().equals(other._genreIds, _genreIds)&&const DeepCollectionEquality().equals(other._providerIds, _providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DiscoverMoviesParams&&const DeepCollectionEquality().equals(other._genreIds, _genreIds)&&const DeepCollectionEquality().equals(other._providerIds, _providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.sortBy, sortBy) || other.sortBy == sortBy)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_genreIds),const DeepCollectionEquality().hash(_providerIds),minRating,releaseYear);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_genreIds),const DeepCollectionEquality().hash(_providerIds),minRating,sortBy,releaseYear);
 
 @override
 String toString() {
-  return 'DiscoverMoviesParams(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear)';
+  return 'DiscoverMoviesParams(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, sortBy: $sortBy, releaseYear: $releaseYear)';
 }
 
 
@@ -259,7 +261,7 @@ abstract mixin class _$DiscoverMoviesParamsCopyWith<$Res> implements $DiscoverMo
   factory _$DiscoverMoviesParamsCopyWith(_DiscoverMoviesParams value, $Res Function(_DiscoverMoviesParams) _then) = __$DiscoverMoviesParamsCopyWithImpl;
 @override @useResult
 $Res call({
- List<int> genreIds, List<int> providerIds, double minRating, int releaseYear
+ List<int> genreIds, List<int> providerIds, double minRating, String sortBy, int releaseYear
 });
 
 
@@ -276,12 +278,13 @@ class __$DiscoverMoviesParamsCopyWithImpl<$Res>
 
 /// Create a copy of DiscoverMoviesParams
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? releaseYear = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? sortBy = null,Object? releaseYear = null,}) {
   return _then(_DiscoverMoviesParams(
 genreIds: null == genreIds ? _self._genreIds : genreIds // ignore: cast_nullable_to_non_nullable
 as List<int>,providerIds: null == providerIds ? _self._providerIds : providerIds // ignore: cast_nullable_to_non_nullable
 as List<int>,minRating: null == minRating ? _self.minRating : minRating // ignore: cast_nullable_to_non_nullable
-as double,releaseYear: null == releaseYear ? _self.releaseYear : releaseYear // ignore: cast_nullable_to_non_nullable
+as double,sortBy: null == sortBy ? _self.sortBy : sortBy // ignore: cast_nullable_to_non_nullable
+as String,releaseYear: null == releaseYear ? _self.releaseYear : releaseYear // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }

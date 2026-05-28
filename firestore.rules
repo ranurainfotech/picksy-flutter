@@ -63,6 +63,27 @@ service cloud.firestore {
       );
       allow delete: if request.auth != null
         && resource.data.createdBy == request.auth.uid;
+
+      match /swipes/{swipeId} {
+        allow read: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members;
+        allow create, update: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.movieId is int
+          && request.resource.data.action in ["liked", "disliked", "maybe"];
+        allow delete: if false;
+      }
+
+      match /matches/{matchId} {
+        allow read: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members;
+        allow create, update: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members
+          && request.resource.data.movieId is int
+          && request.resource.data.title is string;
+        allow delete: if false;
+      }
     }
   }
 }
