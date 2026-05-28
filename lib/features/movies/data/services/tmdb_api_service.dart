@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 
 import '../dto/discover_movies_response_dto.dart';
 import '../dto/genres_response_dto.dart';
+import '../dto/movie_dto.dart';
 import '../dto/providers_response_dto.dart';
 
 part 'tmdb_api_service.g.dart';
@@ -19,7 +20,7 @@ abstract class TmdbApiService {
 
   @GET('/discover/movie')
   Future<DiscoverMoviesResponseDto> discoverMovies({
-    @Query('with_genres') required String withGenres,
+    @Query('with_genres') String? withGenres,
     @Query('vote_average.gte') required double voteAverageGte,
     @Query('primary_release_date.gte') required String primaryReleaseDateGte,
     @Query('primary_release_date.lte') String? primaryReleaseDateLte,
@@ -27,5 +28,10 @@ abstract class TmdbApiService {
     @Query('watch_region') String watchRegion = 'IN',
     @Query('page') int page = 1,
     @Query('sort_by') String sortBy = 'popularity.desc',
+  });
+
+  @GET('/movie/{movie_id}')
+  Future<MovieDto> getMovieDetails({
+    @Path('movie_id') required int movieId,
   });
 }

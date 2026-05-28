@@ -89,13 +89,9 @@ class TmdbMoviesRepository implements MoviesRepository {
     String sortBy = 'popularity.desc',
     int page = 1,
   }) async {
-    if (genreIds.isEmpty) {
-      return const <Movie>[];
-    }
-
     final responses = [
       await _api.discoverMovies(
-        withGenres: genreIds.join(','),
+        withGenres: genreIds.isEmpty ? null : genreIds.join(','),
         voteAverageGte: minRating,
         primaryReleaseDateGte: releaseYear > 0
             ? '$releaseYear-01-01'
@@ -123,5 +119,23 @@ class TmdbMoviesRepository implements MoviesRepository {
     }
 
     return byMovieId.values.toList(growable: false);
+  }
+
+  @override
+  Future<Movie?> getMovieById(int movieId) async {
+    try {
+      final dto = await _api.getMovieDetails(movieId: movieId);
+      return Movie(
+        id: dto.id,
+        title: dto.title,
+        overview: dto.overview,
+        posterPath: dto.posterPath,
+        backdropPath: dto.backdropPath,
+        voteAverage: dto.voteAverage,
+        releaseDate: dto.releaseDate,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 }

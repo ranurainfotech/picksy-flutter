@@ -13,4 +13,5 @@ abstract class MoviesRepository {
     String sortBy = 'popularity.desc',
     int page = 1,
   });
+  Future<Movie?> getMovieById(int movieId);
 }

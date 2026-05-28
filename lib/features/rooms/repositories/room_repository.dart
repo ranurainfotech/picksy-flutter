@@ -93,6 +93,15 @@ class RoomRepository {
     });
   }
 
+  Future<void> upsertMovieQueue({
+    required String roomId,
+    required List<int> movieQueue,
+  }) {
+    return _rooms.doc(roomId.trim().toUpperCase()).set({
+      'movieQueue': movieQueue,
+    }, SetOptions(merge: true));
+  }
+
   Future<void> leaveRoom({required String roomId, required String uid}) async {
     final roomRef = _rooms.doc(roomId.trim().toUpperCase());
     final snapshot = await roomRef.get();

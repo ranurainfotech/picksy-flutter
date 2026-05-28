@@ -150,28 +150,30 @@ class RoomLobbyScreen extends ConsumerWidget {
                             .fadeIn(delay: 260.ms, duration: 300.ms)
                             .slideY(begin: 0.14, curve: Curves.easeOutCubic),
                         const Spacer(),
-                        AppButton.primary(
-                              label: isHost
-                                  ? 'Start Swiping →'
-                                  : 'Waiting for host…',
-                              onPressed: isHost
-                                  ? () async {
-                                      await ref
-                                          .read(roomRepositoryProvider)
-                                          .updateRoomStatus(
-                                            roomId: roomId,
-                                            status: 'active',
-                                          );
-                                      if (context.mounted) {
-                                        context.go(AppRoutes.roomSwipe(roomId));
+                        if (!suppressAutoRedirectToSwipe) ...[
+                          AppButton.primary(
+                                label: isHost
+                                    ? 'Start Swiping →'
+                                    : 'Waiting for host…',
+                                onPressed: isHost
+                                    ? () async {
+                                        await ref
+                                            .read(roomRepositoryProvider)
+                                            .updateRoomStatus(
+                                              roomId: roomId,
+                                              status: 'active',
+                                            );
+                                        if (context.mounted) {
+                                          context.go(AppRoutes.roomSwipe(roomId));
+                                        }
                                       }
-                                    }
-                                  : null,
-                            )
-                            .animate()
-                            .fadeIn(delay: 320.ms, duration: 320.ms)
-                            .slideY(begin: 0.16, curve: Curves.easeOutCubic),
-                        const SizedBox(height: 16),
+                                    : null,
+                              )
+                              .animate()
+                              .fadeIn(delay: 320.ms, duration: 320.ms)
+                              .slideY(begin: 0.16, curve: Curves.easeOutCubic),
+                          const SizedBox(height: 16),
+                        ],
                       ],
                     ),
                   ),

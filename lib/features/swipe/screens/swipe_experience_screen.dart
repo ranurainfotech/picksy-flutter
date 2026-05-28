@@ -6,19 +6,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_design_system.dart';
 import '../../../routes/app_routes.dart';
-import '../../auth/providers/auth_providers.dart';
 import '../../movies/domain/entities/movie.dart';
-import '../../movies/domain/entities/genre.dart';
-import '../../movies/domain/entities/streaming_provider.dart';
-import '../../movies/presentation/providers/movies_providers.dart';
-import '../../rooms/models/room_filters.dart';
-import '../../rooms/providers/room_repository_provider.dart';
 import '../../rooms/providers/rooms_provider.dart';
 import '../../rooms/theme/app_rooms_tokens.dart';
 import '../models/swipe_decision.dart';
+import '../models/swipe_match.dart';
 import '../providers/swipe_realtime_providers.dart';
-import '../providers/swipe_repository_provider.dart';
+import '../providers/swipe_session_provider.dart';
 import '../widgets/swipe_action_buttons.dart';
+import '../widgets/swipe_match_toast.dart';
 import '../widgets/swipe_movie_card.dart';
 import '../widgets/swipe_top_bar.dart';
 
@@ -36,21 +32,18 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
   static const _swipeThresholdY = -120.0;
 
   final ValueNotifier<Offset> _dragOffset = ValueNotifier<Offset>(Offset.zero);
+  final Set<int> _celebratedMatchIds = <int>{};
   bool _isAnimatingOut = false;
-  final ValueNotifier<_SwipeUiState> _uiState = ValueNotifier<_SwipeUiState>(
-    const _SwipeUiState(),
-  );
+  bool _seededMatchIds = false;
 
   @override
   void initState() {
     super.initState();
-    Future<void>.microtask(_loadInitialDeck);
   }
 
   @override
   void dispose() {
     _dragOffset.dispose();
-    _uiState.dispose();
     super.dispose();
   }
 
@@ -58,6 +51,11 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
   Widget build(BuildContext context) {
     final roomId = widget.roomId;
     final roomAsync = ref.watch(roomStreamProvider(roomId));
+    final sessionAsync = ref.watch(swipeSessionProvider(roomId));
+
+    ref.listen(roomMatchesProvider(roomId), (previous, next) {
+      _onMatchesUpdated(context, next);
+    });
 
     return Scaffold(
       body: DecoratedBox(
@@ -67,7 +65,7 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: _buildBody(context, roomAsync),
+            child: _buildBody(context, roomAsync, sessionAsync),
           ),
         ),
       ),
@@ -77,6 +75,7 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
   Widget _buildBody(
     BuildContext context,
     AsyncValue<Map<String, dynamic>?> roomAsync,
+    AsyncValue<SwipeSessionState> sessionAsync,
   ) {
     final room = roomAsync.asData?.value ?? const <String, dynamic>{};
     final roomName = room['name'] as String? ?? 'Saturday Night 🍿';
@@ -84,15 +83,52 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
         .whereType<String>()
         .toList(growable: false);
 
-    return ValueListenableBuilder<_SwipeUiState>(
-      valueListenable: _uiState,
-      builder: (context, currentUi, _) {
-        if (currentUi.isInitialLoading) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.neonPink),
-          );
-        }
+    if (sessionAsync.isLoading) {
+      return Column(
+        children: [
+          _Header(
+            roomId: widget.roomId,
+            roomName: roomName,
+            memberIds: memberIds,
+          ),
+          const SizedBox(height: 10),
+          const Expanded(
+            child: Center(
+              child: CircularProgressIndicator(color: AppColors.neonPink),
+            ),
+          ),
+        ],
+      );
+    }
 
+    return sessionAsync.when(
+      loading: () => Column(
+        children: [
+          _Header(
+            roomId: widget.roomId,
+            roomName: roomName,
+            memberIds: memberIds,
+          ),
+          const SizedBox(height: 10),
+          const Expanded(
+            child: Center(
+              child: CircularProgressIndicator(color: AppColors.neonPink),
+            ),
+          ),
+        ],
+      ),
+      error: (_, _) => Column(
+        children: [
+          _Header(
+            roomId: widget.roomId,
+            roomName: roomName,
+            memberIds: memberIds,
+          ),
+          const SizedBox(height: 10),
+          Expanded(child: _EmptyState(onRetry: _retrySwipeSession)),
+        ],
+      ),
+      data: (currentUi) {
         if (currentUi.movies.isEmpty || currentUi.currentIndex >= currentUi.movies.length) {
           return Column(
             children: [
@@ -102,11 +138,12 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
                 memberIds: memberIds,
               ),
               const SizedBox(height: 10),
-              Expanded(child: _EmptyState(onRetry: _loadInitialDeck)),
+              Expanded(child: _EmptyState(onRetry: _retrySwipeSession)),
             ],
           );
         }
 
+        _precacheUpcoming(context, currentUi.movies, currentUi.currentIndex);
         final visibleMovie = currentUi.movies[currentUi.currentIndex];
         final likedUserIdsAsync = ref.watch(
           movieLikedUserIdsProvider((
@@ -184,10 +221,10 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
                 ),
               ),
             ],
-            if (currentUi.deckError != null) ...[
+            if (currentUi.errorMessage != null) ...[
               const SizedBox(height: 8),
               Text(
-                currentUi.deckError!,
+                currentUi.errorMessage!,
                 style: AppTypography.caption.copyWith(color: AppColors.reject),
               ),
             ],
@@ -198,153 +235,31 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
     );
   }
 
-  Future<void> _loadInitialDeck() async {
-    _uiState.value = _uiState.value.copyWith(
-      isInitialLoading: true,
-      isFetchingMore: false,
-      deckError: null,
-      nextPage: 1,
-      currentIndex: 0,
-      movies: const <Movie>[],
-    );
+  void _retrySwipeSession() {
+    ref.read(swipeSessionProvider(widget.roomId).notifier).retry(clearQueue: true);
+  }
 
-    try {
-      final roomSnapshot = await ref
-          .read(roomRepositoryProvider)
-          .getRoom(widget.roomId);
-      final roomData = roomSnapshot.data();
-      if (roomData == null) {
-        _uiState.value = _uiState.value.copyWith(
-          isInitialLoading: false,
-          deckError: 'Room not found.',
-        );
+  void _onMatchesUpdated(BuildContext context, AsyncValue<List<SwipeMatch>> next) {
+    final matches = next.asData?.value;
+    if (matches == null) {
+      return;
+    }
+
+    if (!_seededMatchIds) {
+      _celebratedMatchIds.addAll(matches.map((match) => match.movieId));
+      _seededMatchIds = true;
+      return;
+    }
+
+    for (final match in matches) {
+      if (!_celebratedMatchIds.add(match.movieId)) {
+        continue;
+      }
+      if (!mounted) {
         return;
       }
-
-      final rawFilters = roomData['filters'];
-      final filters = await _resolveFilters(rawFilters);
-
-      final fetched = <Movie>[];
-      var page = 1;
-      while (fetched.length < 15 && page <= 3) {
-        final pageItems = await ref
-            .read(moviesRepositoryProvider)
-            .discoverMovies(
-              genreIds: filters.genreIds,
-              providerIds: filters.providerIds,
-              minRating: filters.minRating,
-              releaseYear: filters.releaseYear,
-              sortBy: filters.sortBy,
-              page: page,
-            );
-        for (final movie in pageItems) {
-          if (fetched.every((existing) => existing.id != movie.id)) {
-            fetched.add(movie);
-          }
-        }
-        if (pageItems.isEmpty) break;
-        page += 1;
-      }
-
-      _uiState.value = _uiState.value.copyWith(
-        movies: fetched,
-        nextPage: page,
-        filters: filters,
-        isInitialLoading: false,
-      );
-      if (mounted && fetched.isNotEmpty) {
-        _precacheUpcoming(context, 0);
-      }
-    } catch (_) {
-      _uiState.value = _uiState.value.copyWith(
-        isInitialLoading: false,
-        deckError: 'Could not load swipe deck.',
-      );
+      showSwipeMatchToast(context, match);
     }
-  }
-
-  Future<RoomFilters> _resolveFilters(Object? rawFilters) async {
-    final map = _toStringDynamicMap(rawFilters);
-    if (map == null) {
-      return const RoomFilters();
-    }
-
-    final parsed = RoomFilters.fromJson(map);
-    if (parsed.genreIds.isNotEmpty) {
-      return parsed;
-    }
-
-    // Backward compatibility for old room docs that stored names instead of IDs.
-    final legacyGenreNames = _stringList(map['genres']);
-    final legacyProviderNames = _stringList(map['streamingPlatforms']);
-
-    if (legacyGenreNames.isEmpty && legacyProviderNames.isEmpty) {
-      return parsed;
-    }
-
-    final genres = await ref.read(genresProvider.future);
-    final providers = await ref.read(streamingProvidersProvider.future);
-
-    final matchedGenreIds = _matchGenreIds(genres, legacyGenreNames);
-    final matchedProviderIds = _matchProviderIds(providers, legacyProviderNames);
-
-    return parsed.copyWith(
-      genreIds: matchedGenreIds.isEmpty ? parsed.genreIds : matchedGenreIds,
-      providerIds: matchedProviderIds.isEmpty ? parsed.providerIds : matchedProviderIds,
-    );
-  }
-
-  Map<String, dynamic>? _toStringDynamicMap(Object? value) {
-    if (value is Map<String, dynamic>) {
-      return value;
-    }
-    if (value is Map) {
-      final map = <String, dynamic>{};
-      for (final entry in value.entries) {
-        map['${entry.key}'] = entry.value;
-      }
-      return map;
-    }
-    return null;
-  }
-
-  List<String> _stringList(Object? value) {
-    if (value is! List) {
-      return const <String>[];
-    }
-    return value.map((item) => '$item'.trim()).where((item) => item.isNotEmpty).toList();
-  }
-
-  List<int> _matchGenreIds(List<Genre> genres, List<String> names) {
-    if (names.isEmpty) {
-      return const <int>[];
-    }
-    final normalized = names.map(_normalize).toSet();
-    final ids = <int>[];
-    for (final genre in genres) {
-      if (normalized.contains(_normalize(genre.name))) {
-        ids.add(genre.id);
-      }
-    }
-    return ids;
-  }
-
-  List<int> _matchProviderIds(List<StreamingProvider> providers, List<String> names) {
-    if (names.isEmpty) {
-      return const <int>[];
-    }
-    final normalized = names.map(_normalize).toSet();
-    final ids = <int>[];
-    for (final provider in providers) {
-      if (normalized.contains(_normalize(provider.name))) {
-        ids.add(provider.id);
-      }
-    }
-    return ids;
-  }
-
-  String _normalize(String value) {
-    return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 
   double _dragProgress(Offset dragOffset) {
@@ -356,44 +271,6 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
     return horizontal > upward ? horizontal : upward;
   }
 
-  Future<void> _fetchMoreIfNeeded() async {
-    final ui = _uiState.value;
-    if (ui.isFetchingMore || ui.isInitialLoading) return;
-    if ((ui.movies.length - ui.currentIndex) > 4) return;
-
-    _uiState.value = ui.copyWith(isFetchingMore: true, deckError: null);
-
-    try {
-      final pageItems = await ref
-          .read(moviesRepositoryProvider)
-          .discoverMovies(
-            genreIds: ui.filters.genreIds,
-            providerIds: ui.filters.providerIds,
-            minRating: ui.filters.minRating,
-            releaseYear: ui.filters.releaseYear,
-            sortBy: ui.filters.sortBy,
-            page: ui.nextPage,
-          );
-
-      final merged = List<Movie>.from(ui.movies);
-      for (final movie in pageItems) {
-        if (merged.every((existing) => existing.id != movie.id)) {
-          merged.add(movie);
-        }
-      }
-
-      _uiState.value = _uiState.value.copyWith(
-        movies: merged,
-        nextPage: ui.nextPage + 1,
-        isFetchingMore: false,
-      );
-    } catch (_) {
-      _uiState.value = _uiState.value.copyWith(
-        isFetchingMore: false,
-        deckError: 'Could not load more movies.',
-      );
-    }
-  }
 
   void _onPanUpdate(DragUpdateDetails details) {
     if (_isAnimatingOut) return;
@@ -425,11 +302,6 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
   ) async {
     if (_isAnimatingOut) return;
     _isAnimatingOut = true;
-    final currentUi = _uiState.value;
-    if (currentUi.currentIndex >= currentUi.movies.length) {
-      _isAnimatingOut = false;
-      return;
-    }
 
     final outOffset = switch (decision) {
       SwipeDecision.liked => const Offset(540, -120),
@@ -440,80 +312,18 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
 
     await Future<void>.delayed(const Duration(milliseconds: 170));
     if (!mounted) return;
-    _uiState.value = _uiState.value.copyWith(currentIndex: currentUi.currentIndex + 1);
     _dragOffset.value = Offset.zero;
+    await ref.read(swipeSessionProvider(roomId).notifier).submitSwipe(decision: decision);
     _isAnimatingOut = false;
-
-    final uid = ref.read(authRepositoryProvider).currentUser?.uid;
-    if (uid != null) {
-      ref
-          .read(swipeRepositoryProvider)
-          .submitSwipe(
-            roomId: roomId,
-            userId: uid,
-            movie: movie,
-            decision: decision,
-          )
-          .catchError((_) {});
-    }
-
-    await _fetchMoreIfNeeded();
-    if (!mounted) return;
-    final latestUi = _uiState.value;
-    if (latestUi.currentIndex < latestUi.movies.length) {
-      _precacheUpcoming(context, latestUi.currentIndex);
-    }
   }
 
-  void _precacheUpcoming(BuildContext context, int fromIndex) {
-    final movies = _uiState.value.movies;
+  void _precacheUpcoming(BuildContext context, List<Movie> movies, int fromIndex) {
     for (var i = fromIndex; i <= fromIndex + 2 && i < movies.length; i += 1) {
       final url = movies[i].posterUrl;
       if (url != null) {
         precacheImage(NetworkImage(url), context);
       }
     }
-  }
-}
-
-class _SwipeUiState {
-  const _SwipeUiState({
-    this.currentIndex = 0,
-    this.isInitialLoading = true,
-    this.isFetchingMore = false,
-    this.deckError,
-    this.nextPage = 1,
-    this.filters = const RoomFilters(),
-    this.movies = const <Movie>[],
-  });
-
-  final int currentIndex;
-  final bool isInitialLoading;
-  final bool isFetchingMore;
-  final String? deckError;
-  final int nextPage;
-  final RoomFilters filters;
-  final List<Movie> movies;
-
-  _SwipeUiState copyWith({
-    int? currentIndex,
-    bool? isInitialLoading,
-    bool? isFetchingMore,
-    String? deckError,
-    bool clearDeckError = false,
-    int? nextPage,
-    RoomFilters? filters,
-    List<Movie>? movies,
-  }) {
-    return _SwipeUiState(
-      currentIndex: currentIndex ?? this.currentIndex,
-      isInitialLoading: isInitialLoading ?? this.isInitialLoading,
-      isFetchingMore: isFetchingMore ?? this.isFetchingMore,
-      deckError: clearDeckError ? null : (deckError ?? this.deckError),
-      nextPage: nextPage ?? this.nextPage,
-      filters: filters ?? this.filters,
-      movies: movies ?? this.movies,
-    );
   }
 }
 
