@@ -15,7 +15,8 @@ import '../providers/swipe_realtime_providers.dart';
 import '../providers/swipe_session_provider.dart';
 import '../widgets/swipe_action_buttons.dart';
 import '../widgets/swipe_drag_feedback_overlay.dart';
-import '../widgets/swipe_match_toast.dart';
+import '../models/match_overlay_data.dart';
+import '../widgets/match_overlay/match_overlay_widget.dart';
 import '../widgets/swipe_movie_card.dart';
 import '../widgets/swipe_top_bar.dart';
 
@@ -35,8 +36,12 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
 
   final ValueNotifier<Offset> _dragOffset = ValueNotifier<Offset>(Offset.zero);
   final Set<int> _celebratedMatchIds = <int>{};
+  final List<MatchOverlayData> _matchOverlayQueue = <MatchOverlayData>[];
+  MatchOverlayData? _activeMatchOverlay;
   bool _isAnimatingOut = false;
   bool _seededMatchIds = false;
+
+  bool get _isMatchOverlayVisible => _activeMatchOverlay != null;
 
   @override
   void initState() {
@@ -60,16 +65,38 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
     });
 
     return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: AppRoomsTokens.backgroundGradient,
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: _buildBody(context, roomAsync, sessionAsync),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: AppRoomsTokens.backgroundGradient,
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: IgnorePointer(
+                  ignoring: _isMatchOverlayVisible,
+                  child: _buildBody(context, roomAsync, sessionAsync),
+                ),
+              ),
+            ),
           ),
-        ),
+          if (_activeMatchOverlay != null)
+            MatchOverlayWidget(
+              key: ValueKey(_activeMatchOverlay!.match.movieId),
+              data: _activeMatchOverlay!,
+              onDismiss: _dismissMatchOverlay,
+              onAddToWatchlist: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Watchlist coming soon'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+            ),
+        ],
       ),
     );
   }
@@ -140,7 +167,12 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
                 memberIds: memberIds,
               ),
               const SizedBox(height: 10),
-              Expanded(child: _EmptyState(onRetry: _retrySwipeSession)),
+              Expanded(
+                child: _EmptyState(
+                  message: currentUi.errorMessage,
+                  onRetry: _retrySwipeSession,
+                ),
+              ),
             ],
           );
         }
@@ -261,6 +293,16 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
       return;
     }
 
+    final room = ref.read(roomStreamProvider(widget.roomId)).asData?.value;
+    final memberIds = (room?['members'] as List? ?? const <dynamic>[])
+        .whereType<String>()
+        .toList(growable: false);
+    final memberCount = memberIds.length;
+
+    if (memberCount < 2) {
+      return;
+    }
+
     if (!_seededMatchIds) {
       _celebratedMatchIds.addAll(matches.map((match) => match.movieId));
       _seededMatchIds = true;
@@ -274,8 +316,52 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
       if (!mounted) {
         return;
       }
-      showSwipeMatchToast(context, match);
+      _enqueueMatchOverlay(
+        MatchOverlayData(
+          match: match,
+          movie: _movieForMatch(match),
+          memberCount: memberCount,
+          likedUserIds: match.likedBy,
+        ),
+      );
     }
+  }
+
+  Movie _movieForMatch(SwipeMatch match) {
+    final session = ref.read(swipeSessionProvider(widget.roomId)).asData?.value;
+    if (session != null) {
+      for (final movie in session.movies) {
+        if (movie.id == match.movieId) {
+          return movie;
+        }
+      }
+    }
+    return Movie(
+      id: match.movieId,
+      title: match.title,
+      overview: '',
+      posterPath: match.posterPath,
+      voteAverage: 0,
+    );
+  }
+
+  void _enqueueMatchOverlay(MatchOverlayData data) {
+    if (_activeMatchOverlay == null) {
+      setState(() => _activeMatchOverlay = data);
+      return;
+    }
+    _matchOverlayQueue.add(data);
+  }
+
+  void _dismissMatchOverlay() {
+    if (!mounted) {
+      return;
+    }
+    if (_matchOverlayQueue.isEmpty) {
+      setState(() => _activeMatchOverlay = null);
+      return;
+    }
+    setState(() => _activeMatchOverlay = _matchOverlayQueue.removeAt(0));
   }
 
   double _dragProgress(Offset dragOffset) {
@@ -289,12 +375,12 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
 
 
   void _onPanUpdate(DragUpdateDetails details) {
-    if (_isAnimatingOut) return;
+    if (_isAnimatingOut || _isMatchOverlayVisible) return;
     _dragOffset.value += details.delta;
   }
 
   Future<void> _onPanEnd(String roomId, Movie movie) async {
-    if (_isAnimatingOut) return;
+    if (_isAnimatingOut || _isMatchOverlayVisible) return;
     final dragOffset = _dragOffset.value;
     if (dragOffset.dx > _swipeThresholdX) {
       await _triggerAction(roomId, movie, SwipeDecision.liked);
@@ -316,7 +402,7 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
     Movie movie,
     SwipeDecision decision,
   ) async {
-    if (_isAnimatingOut) return;
+    if (_isAnimatingOut || _isMatchOverlayVisible) return;
     _isAnimatingOut = true;
 
     final outOffset = switch (decision) {
@@ -413,7 +499,9 @@ class _Header extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onRetry});
+  const _EmptyState({this.message, required this.onRetry});
+
+  final String? message;
   final VoidCallback onRetry;
 
   @override
@@ -422,7 +510,7 @@ class _EmptyState extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'No movies found for selected filters.',
+          message ?? 'No movies found for selected filters.',
           style: AppTypography.bodyRegular.copyWith(
             color: AppColors.secondaryText,
           ),

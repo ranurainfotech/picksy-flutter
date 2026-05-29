@@ -9,6 +9,8 @@ part 'discover_movies_response_dto.g.dart';
 abstract class DiscoverMoviesResponseDto with _$DiscoverMoviesResponseDto {
   const factory DiscoverMoviesResponseDto({
     @Default(<MovieDto>[]) List<MovieDto> results,
+    @Default(1) @JsonKey(name: 'total_pages') int totalPages,
+    @Default(0) @JsonKey(name: 'total_results') int totalResults,
   }) = _DiscoverMoviesResponseDto;
 
   factory DiscoverMoviesResponseDto.fromJson(Map<String, dynamic> json) =>

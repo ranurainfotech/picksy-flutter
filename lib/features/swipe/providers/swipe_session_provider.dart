@@ -88,10 +88,20 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
   /// Clears a stale persisted queue and re-runs [build].
   Future<void> retry({bool clearQueue = true}) async {
     if (clearQueue) {
-      await ref.read(roomRepositoryProvider).upsertMovieQueue(
-            roomId: roomId,
-            movieQueue: const <int>[],
-          );
+      try {
+        await ref.read(roomRepositoryProvider).upsertMovieQueue(
+              roomId: roomId,
+              movieQueue: const <int>[],
+            );
+      } catch (error, stackTrace) {
+        unawaited(
+          ref.read(crashReportingServiceProvider).recordError(
+                error,
+                stackTrace,
+                fatal: false,
+              ),
+        );
+      }
     }
     ref.invalidateSelf();
   }
@@ -123,10 +133,16 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
           );
 
     var queueIds = _parseMovieQueueIds(roomData['movieQueue']);
-    var movies = await _fetchDeckFromDiscover(
+    final discovered = await _fetchDeckFromDiscover(
       filters: filters,
       swipedIds: swipedIds,
       minCount: _initialBatchSize,
+    );
+
+    var movies = await _buildDeckFromDiscoverAndQueue(
+      discovered: discovered,
+      queueIds: queueIds,
+      swipedIds: swipedIds,
     );
 
     if (movies.isEmpty) {
@@ -134,20 +150,26 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
         endReached: true,
         queueIds: queueIds,
         visibleQueueIds: const <int>[],
+        errorMessage: swipedIds.isNotEmpty
+            ? 'No new movies left for these filters. Try loosening filters or tap Try Again.'
+            : 'No movies found for these filters. Try loosening genres or providers.',
       );
     }
 
-    if (queueIds.isEmpty) {
-      queueIds = movies.map((movie) => movie.id).toList(growable: false);
-      await ref.read(roomRepositoryProvider).upsertMovieQueue(
-            roomId: roomId,
-            movieQueue: queueIds,
-          );
-    }
-
-    final visibleQueueIds = queueIds
+    var visibleQueueIds = queueIds
         .where((id) => !swipedIds.contains(id))
         .toList(growable: false);
+
+    if (queueIds.isEmpty || visibleQueueIds.isEmpty) {
+      queueIds = movies.map((movie) => movie.id).toList(growable: false);
+      visibleQueueIds = queueIds;
+      unawaited(
+        ref.read(roomRepositoryProvider).upsertMovieQueue(
+              roomId: roomId,
+              movieQueue: queueIds,
+            ),
+      );
+    }
 
     return SwipeSessionState(
       movies: movies,
@@ -168,9 +190,10 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
     final repo = ref.read(moviesRepositoryProvider);
     final movies = <Movie>[];
     final seen = <int>{};
+    var lastPage = 10;
 
-    for (var page = startPage; page <= 10 && movies.length < minCount; page += 1) {
-      final pageMovies = await repo.discoverMovies(
+    for (var page = startPage; page <= lastPage && movies.length < minCount; page += 1) {
+      final pageResult = await repo.discoverMoviesPage(
         genreIds: filters.genreIds,
         providerIds: filters.providerIds,
         minRating: filters.minRating,
@@ -178,10 +201,16 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
         sortBy: filters.sortBy,
         page: page,
       );
-      if (pageMovies.isEmpty) {
-        break;
+      lastPage = pageResult.totalPages;
+
+      if (pageResult.movies.isEmpty) {
+        if (page >= lastPage) {
+          break;
+        }
+        continue;
       }
-      for (final movie in pageMovies) {
+
+      for (final movie in pageResult.movies) {
         if (!seen.add(movie.id) || swipedIds.contains(movie.id)) {
           continue;
         }
@@ -190,9 +219,51 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
           break;
         }
       }
+
+      if (page >= lastPage) {
+        break;
+      }
     }
 
     return movies;
+  }
+
+  Future<List<Movie>> _buildDeckFromDiscoverAndQueue({
+    required List<Movie> discovered,
+    required List<int> queueIds,
+    required Set<int> swipedIds,
+  }) async {
+    final repo = ref.read(moviesRepositoryProvider);
+    final byId = <int, Movie>{for (final movie in discovered) movie.id: movie};
+    final deck = <Movie>[];
+
+    for (final id in queueIds) {
+      if (swipedIds.contains(id)) {
+        continue;
+      }
+      final cached = byId[id];
+      if (cached != null) {
+        deck.add(cached);
+        continue;
+      }
+      final movie = await repo.getMovieById(id);
+      if (movie != null) {
+        byId[movie.id] = movie;
+        deck.add(movie);
+      }
+    }
+
+    for (final movie in discovered) {
+      if (swipedIds.contains(movie.id)) {
+        continue;
+      }
+      if (deck.any((entry) => entry.id == movie.id)) {
+        continue;
+      }
+      deck.add(movie);
+    }
+
+    return deck;
   }
 
   List<int> _parseMovieQueueIds(Object? rawQueue) {

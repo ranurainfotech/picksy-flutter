@@ -110,7 +110,7 @@ class SwipeRepository {
         .whereType<String>()
         .toSet();
 
-    if (members.isEmpty) {
+    if (members.length < 2) {
       return const SwipeSubmitOutcome();
     }
 
@@ -176,12 +176,13 @@ class SwipeRepository {
 }
 
 /// Minimum number of **member** likes required before creating a match.
+/// Returns a value greater than any possible like count when [memberCount] < 2.
 int matchLikeThreshold(int memberCount) {
-  if (memberCount <= 1) {
-    return 1;
+  if (memberCount < 2) {
+    return memberCount + 1;
   }
   if (memberCount == 2) {
     return 2;
   }
-  return (memberCount * 0.75).floor().clamp(1, memberCount);
+  return (memberCount * 0.75).floor().clamp(2, memberCount);
 }

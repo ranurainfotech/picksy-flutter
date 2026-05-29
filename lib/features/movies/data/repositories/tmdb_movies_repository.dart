@@ -89,36 +89,58 @@ class TmdbMoviesRepository implements MoviesRepository {
     String sortBy = 'popularity.desc',
     int page = 1,
   }) async {
-    final responses = [
-      await _api.discoverMovies(
-        withGenres: genreIds.isEmpty ? null : genreIds.join(','),
-        voteAverageGte: minRating,
-        primaryReleaseDateGte: releaseYear > 0
-            ? '$releaseYear-01-01'
-            : _defaultReleaseDateLowerBound,
-        primaryReleaseDateLte: _defaultReleaseDateUpperBound,
-        withWatchProviders: providerIds.isEmpty ? null : providerIds.join('|'),
-        sortBy: sortBy,
-        page: page,
-      ),
-    ];
+    final pageResult = await discoverMoviesPage(
+      genreIds: genreIds,
+      providerIds: providerIds,
+      minRating: minRating,
+      releaseYear: releaseYear,
+      sortBy: sortBy,
+      page: page,
+    );
+    return pageResult.movies;
+  }
 
-    final byMovieId = <int, Movie>{};
-    for (final response in responses) {
-      for (final dto in response.results) {
-        byMovieId[dto.id] = Movie(
-          id: dto.id,
-          title: dto.title,
-          overview: dto.overview,
-          posterPath: dto.posterPath,
-          backdropPath: dto.backdropPath,
-          voteAverage: dto.voteAverage,
-          releaseDate: dto.releaseDate,
-        );
-      }
-    }
+  @override
+  Future<({List<Movie> movies, int totalPages, int totalResults})> discoverMoviesPage({
+    required List<int> genreIds,
+    required List<int> providerIds,
+    required double minRating,
+    required int releaseYear,
+    String sortBy = 'popularity.desc',
+    int page = 1,
+  }) async {
+    final response = await _api.discoverMovies(
+      // Pipe = OR (comma = AND, which is too restrictive for multi-genre rooms).
+      withGenres: genreIds.isEmpty ? null : genreIds.join('|'),
+      voteAverageGte: minRating,
+      primaryReleaseDateGte: releaseYear > 0
+          ? '$releaseYear-01-01'
+          : _defaultReleaseDateLowerBound,
+      primaryReleaseDateLte: _defaultReleaseDateUpperBound,
+      withWatchProviders: providerIds.isEmpty ? null : providerIds.join('|'),
+      sortBy: sortBy,
+      page: page,
+    );
 
-    return byMovieId.values.toList(growable: false);
+    final movies = response.results
+        .map(
+          (dto) => Movie(
+            id: dto.id,
+            title: dto.title,
+            overview: dto.overview,
+            posterPath: dto.posterPath,
+            backdropPath: dto.backdropPath,
+            voteAverage: dto.voteAverage,
+            releaseDate: dto.releaseDate,
+          ),
+        )
+        .toList(growable: false);
+
+    return (
+      movies: movies,
+      totalPages: response.totalPages,
+      totalResults: response.totalResults,
+    );
   }
 
   @override

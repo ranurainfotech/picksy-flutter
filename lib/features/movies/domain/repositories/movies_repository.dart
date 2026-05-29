@@ -13,5 +13,15 @@ abstract class MoviesRepository {
     String sortBy = 'popularity.desc',
     int page = 1,
   });
+
+  Future<({List<Movie> movies, int totalPages, int totalResults})> discoverMoviesPage({
+    required List<int> genreIds,
+    required List<int> providerIds,
+    required double minRating,
+    required int releaseYear,
+    String sortBy = 'popularity.desc',
+    int page = 1,
+  });
+
   Future<Movie?> getMovieById(int movieId);
 }
