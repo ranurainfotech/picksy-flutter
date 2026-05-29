@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/analytics_provider.dart';
+import '../../../core/services/analytics/analytics_helpers.dart';
+import '../../../core/services/analytics/analytics_screens.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../movies/domain/entities/genre.dart';
 import '../../movies/domain/entities/movie.dart';
@@ -9,6 +13,7 @@ import '../../movies/domain/entities/streaming_provider.dart';
 import '../../movies/presentation/providers/movies_providers.dart';
 import '../../rooms/models/room_filters.dart';
 import '../../rooms/providers/room_repository_provider.dart';
+import '../../../core/services/analytics/swipe_submit_outcome.dart';
 import '../models/swipe_decision.dart';
 import 'swipe_repository_provider.dart';
 
@@ -70,6 +75,13 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
   static const _initialBatchSize = 20;
   static const _incrementBatchSize = 15;
 
+  bool _loggedSessionStart = false;
+  bool _loggedSessionComplete = false;
+  int _sessionSwipeCount = 0;
+  int _sessionMatchCount = 0;
+  String _genreLabel = 'unknown';
+  int _roomSize = 1;
+
   @override
   Future<SwipeSessionState> build() => _load();
 
@@ -90,6 +102,19 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
     final roomData = roomSnapshot.data() ?? const <String, dynamic>{};
 
     final filters = await _resolveFilters(roomData['filters']);
+    final members = (roomData['members'] as List? ?? const <dynamic>[])
+        .whereType<String>()
+        .toList(growable: false);
+    _genreLabel = genreLabelFromFilters(filters);
+    _roomSize = members.isEmpty ? 1 : members.length;
+
+    if (!_loggedSessionStart) {
+      _loggedSessionStart = true;
+      final analytics = ref.read(analyticsServiceProvider);
+      unawaited(analytics.logSwipeSessionStarted());
+      unawaited(analytics.logScreenView(AnalyticsScreens.swipe));
+    }
+
     final swipedIds = uid == null
         ? <int>{}
         : await ref.read(swipeRepositoryProvider).getSwipedMovieIds(
@@ -313,24 +338,74 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
     final queueIndex = current.queueIds.indexOf(movie.id);
     final nextIndex = queueIndex < 0 ? current.currentIndex + 1 : queueIndex + 1;
 
-    ref
-        .read(swipeRepositoryProvider)
-        .submitSwipe(
-          roomId: roomId,
-          userId: uid,
-          movie: movie,
-          decision: decision,
-          nextIndex: nextIndex,
-        )
-        .catchError((_) {});
-
     final nextLocalIndex = current.currentIndex + 1;
-    final nextState = current.copyWith(
-      currentIndex: nextLocalIndex,
-      endReached: nextLocalIndex >= current.movies.length &&
-          current.loadedVisibleCount >= current.visibleQueueIds.length,
+    state = AsyncData(
+      current.copyWith(
+        currentIndex: nextLocalIndex,
+        endReached: nextLocalIndex >= current.movies.length &&
+            current.loadedVisibleCount >= current.visibleQueueIds.length,
+      ),
     );
-    state = AsyncData(nextState);
+
+    SwipeSubmitOutcome outcome;
+    try {
+      outcome = await ref.read(swipeRepositoryProvider).submitSwipe(
+            roomId: roomId,
+            userId: uid,
+            movie: movie,
+            decision: decision,
+            nextIndex: nextIndex,
+          );
+    } catch (error, stackTrace) {
+      state = AsyncData(current);
+      unawaited(
+        ref.read(crashReportingServiceProvider).recordError(
+              error,
+              stackTrace,
+              fatal: false,
+            ),
+      );
+      return;
+    }
+
+    _sessionSwipeCount += 1;
+    if (outcome.matchCreated) {
+      _sessionMatchCount += 1;
+    }
+
+    final analytics = ref.read(analyticsServiceProvider);
+    final roomSize = outcome.memberCount > 0 ? outcome.memberCount : _roomSize;
+    unawaited(
+      switch (decision) {
+        SwipeDecision.liked => analytics.logMovieLiked(
+            movieId: movie.id,
+            genre: _genreLabel,
+            roomSize: roomSize,
+          ),
+        SwipeDecision.disliked => analytics.logMovieDisliked(
+            movieId: movie.id,
+            genre: _genreLabel,
+            roomSize: roomSize,
+          ),
+        SwipeDecision.maybe => analytics.logMovieMaybe(
+            movieId: movie.id,
+            genre: _genreLabel,
+            roomSize: roomSize,
+          ),
+      },
+    );
+
+    final nextState = state.asData!.value;
+
+    if (nextState.endReached && !_loggedSessionComplete) {
+      _loggedSessionComplete = true;
+      unawaited(
+        analytics.logSwipeSessionCompleted(
+          totalSwipes: _sessionSwipeCount,
+          totalMatches: _sessionMatchCount,
+        ),
+      );
+    }
 
     await fetchMoreIfNeeded();
   }

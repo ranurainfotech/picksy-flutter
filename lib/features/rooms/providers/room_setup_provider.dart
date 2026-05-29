@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/analytics_provider.dart';
+import '../../../core/services/analytics/analytics_helpers.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../models/room.dart';
 import '../models/room_filters.dart';
@@ -283,6 +287,14 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
       );
 
       final roomId = await ref.read(roomRepositoryProvider).createRoom(room: room);
+
+      unawaited(
+        ref.read(analyticsServiceProvider).logRoomCreated(
+              genreCount: formState.selectedGenreIds.length,
+              providerCount: formState.selectedProviderIds.length,
+              sortType: sortTypeFromTmdb(formState.selectedSortBy),
+            ),
+      );
 
       state = const AsyncData(null);
       return roomId;

@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/services/analytics/crash_reporting_service.dart';
 import 'core/theme/app_design_system.dart';
 import 'firebase_options.dart';
 import 'routes/app_router.dart';
@@ -12,6 +13,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseCrashReportingService.configureGlobalHandlers();
   runApp(const ProviderScope(child: PicksyApp()));
 }
 

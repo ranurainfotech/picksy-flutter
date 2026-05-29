@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../core/services/analytics/analytics_service.dart';
+import '../../../core/services/analytics/swipe_submit_outcome.dart';
 import '../../movies/domain/entities/movie.dart';
 import '../models/swipe_decision.dart';
 import '../models/swipe_match.dart';
 
 class SwipeRepository {
-  SwipeRepository(this._firestore);
+  SwipeRepository(this._firestore, this._analytics);
 
   final FirebaseFirestore _firestore;
+  final AnalyticsService _analytics;
 
   CollectionReference<Map<String, dynamic>> _swipes(String roomId) =>
       _firestore.collection('rooms').doc(roomId).collection('swipes');
@@ -70,7 +75,7 @@ class SwipeRepository {
     });
   }
 
-  Future<void> submitSwipe({
+  Future<SwipeSubmitOutcome> submitSwipe({
     required String roomId,
     required String userId,
     required Movie movie,
@@ -92,7 +97,7 @@ class SwipeRepository {
 
     final existingMatch = await _matches(roomId).doc('${movie.id}').get();
     if (existingMatch.exists) {
-      return;
+      return const SwipeSubmitOutcome();
     }
 
     final movieSwipes = await _swipes(roomId)
@@ -105,7 +110,9 @@ class SwipeRepository {
         .whereType<String>()
         .toSet();
 
-    if (members.isEmpty) return;
+    if (members.isEmpty) {
+      return const SwipeSubmitOutcome();
+    }
 
     final likedUserIds = <String>{};
     final dislikedUserIds = <String>{};
@@ -126,10 +133,12 @@ class SwipeRepository {
     final memberCount = members.length;
     final threshold = matchLikeThreshold(memberCount);
     if (likedUserIds.length < threshold) {
-      return;
+      return SwipeSubmitOutcome(
+        memberCount: memberCount,
+        likeCount: likedUserIds.length,
+      );
     }
 
-    // Duo rooms (2 members) always need both likes → always a perfect match.
     final matchType = memberCount == 2 || likedUserIds.length >= memberCount
         ? 'perfect'
         : 'majority';
@@ -145,15 +154,28 @@ class SwipeRepository {
       'score': score,
       'createdAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
-  }
 
+    if (matchType == 'perfect') {
+      unawaited(_analytics.logPerfectMatch(memberCount: memberCount));
+    } else {
+      unawaited(
+        _analytics.logMajorityMatch(
+          memberCount: memberCount,
+          likeCount: likedUserIds.length,
+        ),
+      );
+    }
+
+    return SwipeSubmitOutcome(
+      matchCreated: true,
+      matchType: matchType,
+      memberCount: memberCount,
+      likeCount: likedUserIds.length,
+    );
+  }
 }
 
 /// Minimum number of **member** likes required before creating a match.
-///
-/// - 1 person: 1 like (solo / host testing).
-/// - 2 people: **both** must like (duo is always unanimous).
-/// - 3+ people: at least 75% of members (rounded down), minimum 1.
 int matchLikeThreshold(int memberCount) {
   if (memberCount <= 1) {
     return 1;

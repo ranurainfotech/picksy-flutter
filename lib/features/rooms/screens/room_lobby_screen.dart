@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +10,8 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/providers/analytics_provider.dart';
+import '../../../core/services/analytics/analytics_screens.dart';
 import '../../../core/theme/app_design_system.dart';
 import '../../../routes/app_routes.dart';
 import '../../auth/providers/auth_providers.dart';
@@ -15,7 +19,7 @@ import '../models/room_preview.dart';
 import '../providers/room_repository_provider.dart';
 import '../providers/rooms_provider.dart';
 
-class RoomLobbyScreen extends ConsumerWidget {
+class RoomLobbyScreen extends ConsumerStatefulWidget {
   const RoomLobbyScreen({
     super.key,
     required this.roomId,
@@ -23,13 +27,35 @@ class RoomLobbyScreen extends ConsumerWidget {
   });
   final String roomId;
   final bool suppressAutoRedirectToSwipe;
+
+  @override
+  ConsumerState<RoomLobbyScreen> createState() => _RoomLobbyScreenState();
+}
+
+class _RoomLobbyScreenState extends ConsumerState<RoomLobbyScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(
+        ref.read(analyticsServiceProvider).logScreenView(AnalyticsScreens.roomLobby),
+      );
+    });
+  }
   static const String _defaultInviteBaseUrl = String.fromEnvironment(
     'PICKSY_INVITE_BASE_URL',
     defaultValue: 'https://picksy.app',
   );
 
+  void _logInviteShared(String shareMethod) {
+    unawaited(
+      ref.read(analyticsServiceProvider).logInviteShared(shareMethod: shareMethod),
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final roomId = widget.roomId;
     final roomAsync = ref.watch(roomStreamProvider(roomId));
     return roomAsync.when(
       data: (room) {
@@ -50,7 +76,7 @@ class RoomLobbyScreen extends ConsumerWidget {
         final roomName = room['name'] as String? ?? '$roomId Room';
         final category = room['category'] as String? ?? 'movies';
 
-        if (status == 'active' && !suppressAutoRedirectToSwipe) {
+        if (status == 'active' && !widget.suppressAutoRedirectToSwipe) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) context.go(AppRoutes.roomSwipe(roomId));
           });
@@ -145,12 +171,13 @@ class RoomLobbyScreen extends ConsumerWidget {
                               roomCode: roomId,
                               inviteLink: _buildRoomInviteLink(roomId),
                               roomName: roomName,
+                              onInviteShared: _logInviteShared,
                             )
                             .animate()
                             .fadeIn(delay: 260.ms, duration: 300.ms)
                             .slideY(begin: 0.14, curve: Curves.easeOutCubic),
                         const Spacer(),
-                        if (!suppressAutoRedirectToSwipe) ...[
+                        if (!widget.suppressAutoRedirectToSwipe) ...[
                           AppButton.primary(
                                 label: isHost
                                     ? 'Start Swiping →'
@@ -386,10 +413,12 @@ class _ShareRow extends StatelessWidget {
     required this.roomCode,
     required this.inviteLink,
     required this.roomName,
+    required this.onInviteShared,
   });
   final String roomCode;
   final String inviteLink;
   final String roomName;
+  final ValueChanged<String> onInviteShared;
 
   String get _inviteText =>
       'Join my Picksy room "$roomName" ($roomCode): $inviteLink';
@@ -452,6 +481,7 @@ class _ShareRow extends StatelessWidget {
         }
 
         if (label == 'WA') {
+          onInviteShared('whatsapp');
           final waUri = Uri.parse(
             'https://wa.me/?text=${Uri.encodeComponent(_inviteText)}',
           );
@@ -464,6 +494,7 @@ class _ShareRow extends StatelessWidget {
         }
 
         if (label == 'IG') {
+          onInviteShared('instagram');
           final igUri = Uri.parse(
             'instagram://share?text=${Uri.encodeComponent(_inviteText)}',
           );
@@ -480,6 +511,7 @@ class _ShareRow extends StatelessWidget {
         }
 
         if (label == 'SC') {
+          onInviteShared('snapchat');
           final snapUri = Uri.parse(
             'snapchat://creativeKitWeb/camera?caption=${Uri.encodeComponent(_inviteText)}',
           );
@@ -495,6 +527,7 @@ class _ShareRow extends StatelessWidget {
           return;
         }
 
+        onInviteShared('other');
         await fallbackShare();
       },
       child: Container(

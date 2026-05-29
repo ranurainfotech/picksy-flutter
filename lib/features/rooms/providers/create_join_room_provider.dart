@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/analytics_provider.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../repositories/room_repository.dart';
 import 'room_repository_provider.dart';
@@ -102,6 +105,16 @@ class CreateJoinRoomActionNotifier extends AsyncNotifier<void> {
       final roomId = await ref
           .read(roomRepositoryProvider)
           .joinRoom(roomId: formState.roomCode, uid: uid);
+
+      final roomSnapshot = await ref.read(roomRepositoryProvider).getRoom(roomId);
+      final members = (roomSnapshot.data()?['members'] as List? ?? const <dynamic>[])
+          .whereType<String>()
+          .toList(growable: false);
+      unawaited(
+        ref.read(analyticsServiceProvider).logRoomJoined(
+              roomSize: members.isEmpty ? 1 : members.length,
+            ),
+      );
 
       state = const AsyncData(null);
       return roomId;

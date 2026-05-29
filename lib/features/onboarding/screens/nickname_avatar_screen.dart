@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/providers/analytics_provider.dart';
+import '../../../core/services/analytics/analytics_screens.dart';
 import '../../../core/theme/app_design_system.dart';
 import '../../../routes/app_routes.dart';
 import '../models/avatar_option.dart';
@@ -13,11 +17,28 @@ import '../widgets/avatar_choice_grid.dart';
 import '../widgets/nickname_input.dart';
 import '../widgets/onboarding_background.dart';
 
-class NicknameAvatarScreen extends ConsumerWidget {
+class NicknameAvatarScreen extends ConsumerStatefulWidget {
   const NicknameAvatarScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NicknameAvatarScreen> createState() =>
+      _NicknameAvatarScreenState();
+}
+
+class _NicknameAvatarScreenState extends ConsumerState<NicknameAvatarScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(ref.read(analyticsServiceProvider).logOnboardingStarted());
+      unawaited(
+        ref.read(analyticsServiceProvider).logScreenView(AnalyticsScreens.onboarding),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final profile = ref.watch(onboardingProfileProvider);
     final submitState = ref.watch(onboardingSubmitProvider);
     final profileNotifier = ref.read(onboardingProfileProvider.notifier);
@@ -80,6 +101,11 @@ class NicknameAvatarScreen extends ConsumerWidget {
                     onAvatarSelected: (avatarId) {
                       profileNotifier.selectAvatar(avatarId);
                       submitNotifier.clearError();
+                      unawaited(
+                        ref.read(analyticsServiceProvider).logUsernameSelected(
+                              avatarId: avatarId,
+                            ),
+                      );
                     },
                   ).animate().fadeIn(delay: 160.ms, duration: 360.ms),
                   const Spacer(),

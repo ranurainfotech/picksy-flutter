@@ -328,8 +328,12 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
 
     await Future<void>.delayed(const Duration(milliseconds: 170));
     if (!mounted) return;
+    final persistFuture = ref
+        .read(swipeSessionProvider(roomId).notifier)
+        .submitSwipe(decision: decision);
     _dragOffset.value = Offset.zero;
-    await ref.read(swipeSessionProvider(roomId).notifier).submitSwipe(decision: decision);
+    await persistFuture;
+    if (!mounted) return;
     _isAnimatingOut = false;
   }
 

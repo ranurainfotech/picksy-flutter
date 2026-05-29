@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/analytics_provider.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../models/onboarding_profile_state.dart';
 import '../repositories/user_repository.dart';
@@ -82,6 +85,12 @@ class OnboardingSubmitNotifier extends AsyncNotifier<void> {
             avatarId: profile.selectedAvatarId,
             isAnonymous: firebaseUser.isAnonymous,
           );
+
+      final analytics = ref.read(analyticsServiceProvider);
+      unawaited(analytics.logOnboardingCompleted());
+      unawaited(
+        analytics.setUserProperty(name: 'onboarding_completed', value: 'true'),
+      );
 
       state = const AsyncData(null);
       return true;
