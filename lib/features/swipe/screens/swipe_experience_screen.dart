@@ -14,6 +14,7 @@ import '../models/swipe_match.dart';
 import '../providers/swipe_realtime_providers.dart';
 import '../providers/swipe_session_provider.dart';
 import '../widgets/swipe_action_buttons.dart';
+import '../widgets/swipe_drag_feedback_overlay.dart';
 import '../widgets/swipe_match_toast.dart';
 import '../widgets/swipe_movie_card.dart';
 import '../widgets/swipe_top_bar.dart';
@@ -30,6 +31,7 @@ class SwipeExperienceScreen extends ConsumerStatefulWidget {
 class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
   static const _swipeThresholdX = 120.0;
   static const _swipeThresholdY = -120.0;
+  static const _dragFeedbackMaxCards = 3;
 
   final ValueNotifier<Offset> _dragOffset = ValueNotifier<Offset>(Offset.zero);
   final Set<int> _celebratedMatchIds = <int>{};
@@ -144,6 +146,7 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
         }
 
         _precacheUpcoming(context, currentUi.movies, currentUi.currentIndex);
+        final showDragFeedback = currentUi.currentIndex < _dragFeedbackMaxCards;
         final visibleMovie = currentUi.movies[currentUi.currentIndex];
         final likedUserIdsAsync = ref.watch(
           movieLikedUserIdsProvider((
@@ -168,6 +171,12 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
                     valueListenable: _dragOffset,
                     builder: (context, dragOffset, _) {
                       final dragProgress = _dragProgress(dragOffset);
+                      final horizontalLikeProgress = (dragOffset.dx / _swipeThresholdX).clamp(
+                        0.0,
+                        1.0,
+                      );
+                      final horizontalDislikeProgress = ((-dragOffset.dx) / _swipeThresholdX)
+                          .clamp(0.0, 1.0);
                       return Stack(
                         alignment: Alignment.center,
                         children: [
@@ -178,6 +187,13 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
                                 layerIndex: i,
                                 dragProgress: dragProgress,
                                 dragOffset: i == 0 ? dragOffset : Offset.zero,
+                                showDragFeedback: showDragFeedback,
+                                likeFeedbackProgress: i == 0
+                                    ? horizontalLikeProgress
+                                    : 0.0,
+                                dislikeFeedbackProgress: i == 0
+                                    ? horizontalDislikeProgress
+                                    : 0.0,
                                 likedUserIds: i == 0
                                     ? (likedUserIdsAsync.asData?.value ?? const <String>[])
                                     : const <String>[],
@@ -421,6 +437,9 @@ class _CardLayer extends StatelessWidget {
     required this.layerIndex,
     required this.dragProgress,
     required this.dragOffset,
+    required this.showDragFeedback,
+    required this.likeFeedbackProgress,
+    required this.dislikeFeedbackProgress,
     required this.likedUserIds,
     this.onPanUpdate,
     this.onPanEnd,
@@ -430,6 +449,9 @@ class _CardLayer extends StatelessWidget {
   final int layerIndex;
   final double dragProgress;
   final Offset dragOffset;
+  final bool showDragFeedback;
+  final double likeFeedbackProgress;
+  final double dislikeFeedbackProgress;
   final List<String> likedUserIds;
   final ValueChanged<DragUpdateDetails>? onPanUpdate;
   final VoidCallback? onPanEnd;
@@ -465,7 +487,17 @@ class _CardLayer extends StatelessWidget {
               onPanUpdate: onPanUpdate,
               onPanEnd: (_) => onPanEnd?.call(),
               child: RepaintBoundary(
-                child: SwipeMovieCard(movie: movie, likedUserIds: likedUserIds),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    SwipeMovieCard(movie: movie, likedUserIds: likedUserIds),
+                    if (layerIndex == 0 && showDragFeedback)
+                      SwipeDragFeedbackOverlay(
+                        likeProgress: likeFeedbackProgress,
+                        dislikeProgress: dislikeFeedbackProgress,
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
