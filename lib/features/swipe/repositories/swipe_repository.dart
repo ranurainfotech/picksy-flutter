@@ -95,15 +95,6 @@ class SwipeRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
-    final existingMatch = await _matches(roomId).doc('${movie.id}').get();
-    if (existingMatch.exists) {
-      return const SwipeSubmitOutcome();
-    }
-
-    final movieSwipes = await _swipes(roomId)
-        .where('movieId', isEqualTo: movie.id)
-        .get();
-
     final roomSnapshot = await _room(roomId).get();
     final roomData = roomSnapshot.data() ?? const <String, dynamic>{};
     final members = (roomData['members'] as List? ?? const <dynamic>[])
@@ -113,6 +104,10 @@ class SwipeRepository {
     if (members.length < 2) {
       return const SwipeSubmitOutcome();
     }
+
+    final movieSwipes = await _swipes(roomId)
+        .where('movieId', isEqualTo: movie.id)
+        .get();
 
     final likedUserIds = <String>{};
     final dislikedUserIds = <String>{};
@@ -132,19 +127,29 @@ class SwipeRepository {
 
     final memberCount = members.length;
     final threshold = matchLikeThreshold(memberCount);
-    if (likedUserIds.length < threshold) {
+    final likeCount = likedUserIds.length;
+
+    if (likeCount < threshold) {
       return SwipeSubmitOutcome(
         memberCount: memberCount,
-        likeCount: likedUserIds.length,
+        likeCount: likeCount,
       );
     }
 
-    final matchType = memberCount == 2 || likedUserIds.length >= memberCount
+    final matchRef = _matches(roomId).doc('${movie.id}');
+    final existingMatch = await matchRef.get();
+    final previousLikeCount = existingMatch.exists
+        ? _likedByCount(existingMatch.data())
+        : 0;
+    final matchJustQualified =
+        previousLikeCount < threshold && likeCount >= threshold;
+
+    final matchType = memberCount == 2 || likeCount >= memberCount
         ? 'perfect'
         : 'majority';
-    final score = memberCount == 0 ? 0.0 : likedUserIds.length / memberCount;
+    final score = likedUserIds.length / memberCount;
 
-    await _matches(roomId).doc('${movie.id}').set({
+    final matchPayload = <String, dynamic>{
       'movieId': movie.id,
       'title': movie.title,
       'posterPath': movie.posterPath,
@@ -152,26 +157,46 @@ class SwipeRepository {
       'dislikedBy': dislikedUserIds.toList(growable: false),
       'matchType': matchType,
       'score': score,
-      'createdAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    };
+    if (!existingMatch.exists) {
+      matchPayload['createdAt'] = FieldValue.serverTimestamp();
+    }
 
-    if (matchType == 'perfect') {
-      unawaited(_analytics.logPerfectMatch(memberCount: memberCount));
-    } else {
-      unawaited(
-        _analytics.logMajorityMatch(
-          memberCount: memberCount,
-          likeCount: likedUserIds.length,
-        ),
+    await matchRef.set(matchPayload, SetOptions(merge: true));
+
+    if (matchJustQualified) {
+      if (matchType == 'perfect') {
+        unawaited(_analytics.logPerfectMatch(memberCount: memberCount));
+      } else {
+        unawaited(
+          _analytics.logMajorityMatch(
+            memberCount: memberCount,
+            likeCount: likeCount,
+          ),
+        );
+      }
+
+      return SwipeSubmitOutcome(
+        matchCreated: true,
+        matchType: matchType,
+        memberCount: memberCount,
+        likeCount: likeCount,
       );
     }
 
     return SwipeSubmitOutcome(
-      matchCreated: true,
-      matchType: matchType,
       memberCount: memberCount,
-      likeCount: likedUserIds.length,
+      likeCount: likeCount,
     );
+  }
+
+  int _likedByCount(Map<String, dynamic>? data) {
+    if (data == null) {
+      return 0;
+    }
+    return (data['likedBy'] as List? ?? const <dynamic>[])
+        .whereType<String>()
+        .length;
   }
 }
 
@@ -185,4 +210,26 @@ int matchLikeThreshold(int memberCount) {
     return 2;
   }
   return (memberCount * 0.75).floor().clamp(2, memberCount);
+}
+
+/// Whether a match should trigger celebration for the current room size.
+bool isGroupMatch(SwipeMatch match, int memberCount) {
+  if (memberCount < 2) {
+    return false;
+  }
+  return match.likedBy.length >= matchLikeThreshold(memberCount);
+}
+
+/// True when the match newly crossed the like threshold (e.g. 1 → 2 likes).
+bool matchJustCrossedThreshold({
+  required SwipeMatch? previous,
+  required SwipeMatch current,
+  required int memberCount,
+}) {
+  if (memberCount < 2) {
+    return false;
+  }
+  final threshold = matchLikeThreshold(memberCount);
+  final previousLikes = previous?.likedBy.length ?? 0;
+  return previousLikes < threshold && current.likedBy.length >= threshold;
 }

@@ -13,6 +13,7 @@ import '../models/swipe_decision.dart';
 import '../models/swipe_match.dart';
 import '../providers/swipe_realtime_providers.dart';
 import '../providers/swipe_session_provider.dart';
+import '../repositories/swipe_repository.dart';
 import '../widgets/swipe_action_buttons.dart';
 import '../widgets/swipe_drag_feedback_overlay.dart';
 import '../models/match_overlay_data.dart';
@@ -61,7 +62,7 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
     final sessionAsync = ref.watch(swipeSessionProvider(roomId));
 
     ref.listen(roomMatchesProvider(roomId), (previous, next) {
-      _onMatchesUpdated(context, next);
+      _onMatchesUpdated(context, previous, next);
     });
 
     return Scaffold(
@@ -287,7 +288,11 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
     ref.read(swipeSessionProvider(widget.roomId).notifier).retry(clearQueue: true);
   }
 
-  void _onMatchesUpdated(BuildContext context, AsyncValue<List<SwipeMatch>> next) {
+  void _onMatchesUpdated(
+    BuildContext context,
+    AsyncValue<List<SwipeMatch>>? previous,
+    AsyncValue<List<SwipeMatch>> next,
+  ) {
     final matches = next.asData?.value;
     if (matches == null) {
       return;
@@ -303,13 +308,34 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
       return;
     }
 
+    final previousMatches = previous?.asData?.value ?? const <SwipeMatch>[];
+    final previousByMovieId = {
+      for (final match in previousMatches) match.movieId: match,
+    };
+
     if (!_seededMatchIds) {
-      _celebratedMatchIds.addAll(matches.map((match) => match.movieId));
+      for (final match in matches) {
+        if (isGroupMatch(match, memberCount)) {
+          _celebratedMatchIds.add(match.movieId);
+        }
+      }
       _seededMatchIds = true;
       return;
     }
 
     for (final match in matches) {
+      if (!isGroupMatch(match, memberCount)) {
+        continue;
+      }
+
+      final prior = previousByMovieId[match.movieId];
+      if (!matchJustCrossedThreshold(
+        previous: prior,
+        current: match,
+        memberCount: memberCount,
+      )) {
+        continue;
+      }
       if (!_celebratedMatchIds.add(match.movieId)) {
         continue;
       }
