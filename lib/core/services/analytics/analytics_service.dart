@@ -49,6 +49,21 @@ abstract class AnalyticsService {
 
   Future<void> logScreenView(String screenName);
 
+  Future<void> logMatchCardViewed({
+    required String roomType,
+    required String matchType,
+  });
+
+  Future<void> logMatchCardOpened({
+    required String roomId,
+    required int itemId,
+  });
+
+  Future<void> logMatchShared({
+    required String roomId,
+    required int itemId,
+  });
+
   Future<void> setUserProperty({
     required String name,
     required String? value,

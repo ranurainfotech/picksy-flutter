@@ -4,6 +4,8 @@ import 'package:picksy_flutter/features/rooms/screens/room_lobby_screen.dart';
 
 import '../features/auth/providers/auth_providers.dart';
 import '../features/home/screens/home_shell.dart';
+import '../features/matches/screens/match_details_screen.dart';
+import '../features/matches/models/match_feed_item.dart';
 import '../features/onboarding/screens/nickname_avatar_screen.dart';
 import '../features/rooms/screens/create_join_room_screen.dart';
 import '../features/rooms/providers/create_join_room_provider.dart';
@@ -29,7 +31,7 @@ GoRouter createAppRouter(WidgetRef ref) {
       }
 
       if (currentUser == null &&
-          (path == AppRoutes.home || path.startsWith('/rooms/'))) {
+          (path == AppRoutes.home || path.startsWith('/rooms/') || path.startsWith('/matches/'))) {
         return AppRoutes.welcome;
       }
 
@@ -100,6 +102,21 @@ GoRouter createAppRouter(WidgetRef ref) {
         builder: (context, state) {
           final roomId = state.pathParameters['roomId']!;
           return SwipeExperienceScreen(roomId: roomId);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.matchDetailsPattern,
+        builder: (context, state) {
+          final roomId = state.pathParameters['roomId']!;
+          final itemId = int.tryParse(state.pathParameters['itemId'] ?? '') ?? 0;
+          final initialItem = state.extra is MatchFeedItem
+              ? state.extra as MatchFeedItem
+              : null;
+          return MatchDetailsScreen(
+            roomId: roomId,
+            itemId: itemId,
+            initialItem: initialItem,
+          );
         },
       ),
     ],

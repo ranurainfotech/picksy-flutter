@@ -17,4 +17,8 @@ abstract final class AnalyticsEvents {
 
   static const swipeSessionStarted = 'swipe_session_started';
   static const swipeSessionCompleted = 'swipe_session_completed';
+
+  static const matchCardViewed = 'match_card_viewed';
+  static const matchCardOpened = 'match_card_opened';
+  static const matchShared = 'match_shared';
 }

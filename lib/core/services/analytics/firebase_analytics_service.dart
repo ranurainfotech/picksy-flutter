@@ -148,6 +148,48 @@ class FirebaseAnalyticsService implements AnalyticsService {
   }
 
   @override
+  Future<void> logMatchCardViewed({
+    required String roomType,
+    required String matchType,
+  }) {
+    return _logEvent(
+      AnalyticsEvents.matchCardViewed,
+      parameters: {
+        AnalyticsParams.roomType: _sanitize(roomType),
+        AnalyticsParams.matchType: _sanitize(matchType),
+      },
+    );
+  }
+
+  @override
+  Future<void> logMatchCardOpened({
+    required String roomId,
+    required int itemId,
+  }) {
+    return _logEvent(
+      AnalyticsEvents.matchCardOpened,
+      parameters: {
+        AnalyticsParams.roomId: _sanitize(roomId),
+        AnalyticsParams.itemId: itemId,
+      },
+    );
+  }
+
+  @override
+  Future<void> logMatchShared({
+    required String roomId,
+    required int itemId,
+  }) {
+    return _logEvent(
+      AnalyticsEvents.matchShared,
+      parameters: {
+        AnalyticsParams.roomId: _sanitize(roomId),
+        AnalyticsParams.itemId: itemId,
+      },
+    );
+  }
+
+  @override
   Future<void> setUserProperty({
     required String name,
     required String? value,

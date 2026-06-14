@@ -13,4 +13,9 @@ abstract final class AnalyticsParams {
   static const moviesSwiped = 'movies_swiped';
   static const matchesFound = 'matches_found';
   static const screenName = 'screen_name';
+
+  static const roomType = 'room_type';
+  static const matchType = 'match_type';
+  static const roomId = 'room_id';
+  static const itemId = 'item_id';
 }

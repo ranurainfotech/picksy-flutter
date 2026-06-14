@@ -17,4 +17,9 @@ abstract final class AppRoutes {
   }
 
   static String roomSwipe(String roomId) => '/rooms/$roomId/swipe';
+
+  static const matchDetailsPattern = '/matches/:roomId/:itemId';
+
+  static String matchDetails(String roomId, int itemId) =>
+      '/matches/$roomId/$itemId';
 }
