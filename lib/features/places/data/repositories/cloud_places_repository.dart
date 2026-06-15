@@ -1,6 +1,7 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../domain/entities/location_suggestion.dart';
 import '../../domain/entities/place.dart';
 import '../../domain/repositories/places_repository.dart';
 import '../../places_load_errors.dart';
@@ -34,6 +35,40 @@ class CloudPlacesRepository implements PlacesRepository {
         lng: (data['lng'] as num).toDouble(),
         label: data['label'] as String? ?? query.trim(),
       );
+    } on FirebaseFunctionsException catch (error) {
+      throw mapFirebaseFunctionsException(error);
+    }
+  }
+
+  @override
+  Future<List<LocationSuggestion>> searchLocationSuggestions(String query) async {
+    try {
+      final normalized = query.trim();
+      if (normalized.length < 2) {
+        return const <LocationSuggestion>[];
+      }
+
+      final result = await _callable('searchLocationSuggestions')
+          .call<Map<String, dynamic>>({'query': normalized});
+      final data = _asMap(result.data);
+      final rawSuggestions = data['suggestions'] as List? ?? const <dynamic>[];
+
+      final suggestions = rawSuggestions
+          .map((entry) => _parseLocationSuggestion(_asMap(entry)))
+          .where(
+            (suggestion) =>
+                suggestion.label.isNotEmpty &&
+                suggestion.lat != 0 &&
+                suggestion.lng != 0,
+          )
+          .toList(growable: false);
+
+      debugPrint(
+        '[Places] searchLocationSuggestions query="$normalized" '
+        'count=${suggestions.length}',
+      );
+
+      return suggestions;
     } on FirebaseFunctionsException catch (error) {
       throw mapFirebaseFunctionsException(error);
     }
@@ -115,6 +150,14 @@ class CloudPlacesRepository implements PlacesRepository {
     }
   }
 
+  LocationSuggestion _parseLocationSuggestion(Map<String, dynamic> data) {
+    return LocationSuggestion(
+      label: data['label'] as String? ?? '',
+      lat: (data['lat'] as num?)?.toDouble() ?? 0,
+      lng: (data['lng'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
   Place _parsePlace(Map<String, dynamic> data) {
     return Place(
       placeId: data['placeId'] as String? ?? '',
@@ -124,8 +167,28 @@ class CloudPlacesRepository implements PlacesRepository {
       shortAddress: data['shortAddress'] as String? ?? '',
       types: _stringList(data['types']),
       photoUrl: data['photoUrl'] as String?,
+      photoName: data['photoName'] as String?,
       googleMapsUri: data['googleMapsUri'] as String?,
     );
+  }
+
+  @override
+  Future<String?> resolvePlacePhoto(String photoName) async {
+    final normalized = photoName.trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    try {
+      final result =
+          await _callable('resolvePlacePhoto').call<Map<String, dynamic>>({
+        'photoName': normalized,
+      });
+      final data = _asMap(result.data);
+      return data['photoUrl'] as String?;
+    } on FirebaseFunctionsException catch (error) {
+      throw mapFirebaseFunctionsException(error);
+    }
   }
 
   double _parseRating(Object? value) {

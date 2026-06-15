@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/analytics_provider.dart';
 import '../../../core/services/analytics/analytics_helpers.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../../places/constants/restaurant_filter_limits.dart';
+import '../../places/domain/entities/location_suggestion.dart';
 import '../../places/presentation/providers/places_providers.dart';
 import '../models/room.dart';
 import '../models/room_filters.dart';
@@ -88,7 +90,7 @@ class RoomSetupState {
       locationLabel: '',
       lat: 0,
       lng: 0,
-      radiusKm: 5,
+      radiusKm: RestaurantFilterLimits.defaultRadiusKm,
       selectedPriceLevels: const <int>{},
       selectedCuisineTypes: const <String>{'restaurant'},
       openNow: false,
@@ -218,7 +220,7 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
     String locationLabel = '',
     double lat = 0,
     double lng = 0,
-    int radiusKm = 5,
+    int radiusKm = RestaurantFilterLimits.defaultRadiusKm,
     Set<int> priceLevels = const <int>{},
     Set<String> cuisineTypes = const <String>{'restaurant'},
     bool openNow = false,
@@ -313,8 +315,28 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
     );
   }
 
+  void updateLocationSearchQuery(String query) {
+    updateLocationLabel(query);
+  }
+
   void updateRadiusKm(int radiusKm) {
-    state = state.copyWith(radiusKm: radiusKm.clamp(1, 15), clearError: true);
+    state = state.copyWith(
+      radiusKm: radiusKm.clamp(
+        RestaurantFilterLimits.minRadiusKm,
+        RestaurantFilterLimits.maxRadiusKm,
+      ),
+      clearError: true,
+    );
+  }
+
+  void selectLocationSuggestion(LocationSuggestion suggestion) {
+    state = state.copyWith(
+      locationLabel: suggestion.label,
+      lat: suggestion.lat,
+      lng: suggestion.lng,
+      isGeocoding: false,
+      clearError: true,
+    );
   }
 
   void togglePriceLevel(int level) {
@@ -503,6 +525,10 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
                 : mood.displayLabel,
             filters: filters,
           );
+
+      if (formState.isRestaurant) {
+        await ref.read(roomRepositoryProvider).clearPlaceDeck(roomId: roomId);
+      }
 
       state = const AsyncData(null);
       return true;

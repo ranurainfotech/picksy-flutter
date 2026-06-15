@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_design_system.dart';
 import '../../places/constants/restaurant_cuisine_types.dart';
+import '../../places/constants/restaurant_filter_limits.dart';
+import '../../places/domain/entities/location_suggestion.dart';
+import '../../places/presentation/providers/location_suggestions_provider.dart';
 import '../providers/room_setup_provider.dart';
 import '../theme/app_create_room_details_tokens.dart';
+import 'location_suggestion_list.dart';
 
 class RestaurantRoomFiltersSection extends ConsumerStatefulWidget {
   const RestaurantRoomFiltersSection({super.key});
@@ -17,6 +21,7 @@ class RestaurantRoomFiltersSection extends ConsumerStatefulWidget {
 class _RestaurantRoomFiltersSectionState
     extends ConsumerState<RestaurantRoomFiltersSection> {
   late final TextEditingController _locationController;
+  late final FocusNode _locationFocusNode;
   bool _syncingLocation = false;
 
   @override
@@ -24,36 +29,71 @@ class _RestaurantRoomFiltersSectionState
     super.initState();
     _locationController = TextEditingController(
       text: ref.read(roomSetupProvider).locationLabel,
-    )..addListener(_onLocationChanged);
+    )..addListener(_onLocationTextChanged);
+    _locationFocusNode = FocusNode()..addListener(_onLocationFocusChanged);
   }
 
   @override
   void dispose() {
     _locationController
-      ..removeListener(_onLocationChanged)
+      ..removeListener(_onLocationTextChanged)
+      ..dispose();
+    _locationFocusNode
+      ..removeListener(_onLocationFocusChanged)
       ..dispose();
     super.dispose();
   }
 
-  void _onLocationChanged() {
+  void _onLocationTextChanged() {
     if (_syncingLocation) {
       return;
     }
-    ref.read(roomSetupProvider.notifier).updateLocationLabel(
-          _locationController.text,
+
+    final query = _locationController.text;
+    ref.read(roomSetupProvider.notifier).updateLocationSearchQuery(query);
+    ref.read(locationSuggestionsProvider.notifier).onQueryChanged(
+          query,
+          isFieldFocused: _locationFocusNode.hasFocus,
         );
+  }
+
+  void _onLocationFocusChanged() {
+    if (!_locationFocusNode.hasFocus) {
+      return;
+    }
+
+    ref.read(locationSuggestionsProvider.notifier).onQueryChanged(
+          _locationController.text,
+          isFieldFocused: true,
+        );
+  }
+
+  void _onSuggestionSelected(LocationSuggestion suggestion) {
+    _syncingLocation = true;
+    _locationController.text = suggestion.label;
+    _syncingLocation = false;
+
+    ref.read(roomSetupProvider.notifier).selectLocationSuggestion(suggestion);
+    ref.read(locationSuggestionsProvider.notifier).clear();
+    _locationFocusNode.unfocus();
   }
 
   @override
   Widget build(BuildContext context) {
     final setupState = ref.watch(roomSetupProvider);
     final setupNotifier = ref.read(roomSetupProvider.notifier);
+    final searchState = ref.watch(locationSuggestionsProvider);
 
     if (_locationController.text != setupState.locationLabel) {
       _syncingLocation = true;
       _locationController.text = setupState.locationLabel;
       _syncingLocation = false;
     }
+
+    final canSearch = setupState.locationLabel.trim().length >=
+        RestaurantFilterLimits.minLocationQueryLength;
+    final showSuggestionPanel =
+        _locationFocusNode.hasFocus && canSearch;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,35 +103,43 @@ class _RestaurantRoomFiltersSectionState
           title: 'Area / City',
         ),
         const SizedBox(height: AppSpacing.small),
-        TextField(
-          controller: _locationController,
-          style: AppTypography.bodyRegular.copyWith(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'Indiranagar, Bangalore',
-            hintStyle: AppTypography.bodyRegular.copyWith(
-              color: Colors.white.withValues(alpha: 0.35),
+        SizedBox(
+          height: RestaurantFilterLimits.locationSearchFieldHeight,
+          child: TextField(
+            controller: _locationController,
+            focusNode: _locationFocusNode,
+            style: AppTypography.bodyRegular.copyWith(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Search Indiranagar, Koramangala, Mumbai...',
+              hintStyle: AppTypography.bodyRegular.copyWith(
+                color: Colors.white.withValues(alpha: 0.35),
+              ),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.06),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
             ),
-            filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.06),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
+            onTapOutside: (_) => _locationFocusNode.unfocus(),
           ),
         ),
-        const SizedBox(height: 10),
-        AppButton.secondary(
-          label: setupState.isGeocoding ? 'Finding location...' : 'Find location',
-          onPressed: setupState.isGeocoding ? null : setupNotifier.geocodeLocation,
+        LocationSuggestionList(
+          suggestions: searchState.suggestions,
+          isLoading: searchState.isLoading,
+          errorMessage: searchState.errorMessage,
+          hasSearched: searchState.hasSearched,
+          showPanel: showSuggestionPanel,
+          onSuggestionSelected: _onSuggestionSelected,
         ),
         if (setupState.lat != 0 && setupState.lng != 0) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.small),
           Text(
-            setupState.locationLabel,
+            'Selected: ${setupState.locationLabel}',
             style: AppTypography.caption.copyWith(color: AppColors.neonPink),
           ),
         ],
@@ -106,9 +154,11 @@ class _RestaurantRoomFiltersSectionState
         const SizedBox(height: AppSpacing.small),
         Slider(
           value: setupState.radiusKm.toDouble(),
-          min: 1,
-          max: 15,
-          divisions: 14,
+          min: RestaurantFilterLimits.minRadiusKm.toDouble(),
+          max: RestaurantFilterLimits.maxRadiusKm.toDouble(),
+          divisions:
+              RestaurantFilterLimits.maxRadiusKm -
+              RestaurantFilterLimits.minRadiusKm,
           activeColor: AppColors.neonPink,
           onChanged: (value) => setupNotifier.updateRadiusKm(value.round()),
         ),

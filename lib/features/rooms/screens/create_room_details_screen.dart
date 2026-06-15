@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_design_system.dart';
 import '../../../routes/app_routes.dart';
+import '../../places/constants/restaurant_filter_limits.dart';
 import '../../movies/domain/entities/streaming_provider.dart';
 import '../../movies/presentation/controllers/supported_providers.dart';
 import '../../movies/presentation/providers/movies_providers.dart';
@@ -166,7 +167,10 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
             locationLabel: locationLabel,
             lat: lat,
             lng: lng,
-            radiusKm: (radiusMeters / 1000).round().clamp(1, 15),
+            radiusKm: (radiusMeters / 1000).round().clamp(
+              RestaurantFilterLimits.minRadiusKm,
+              RestaurantFilterLimits.maxRadiusKm,
+            ),
             priceLevels: priceLevels,
             cuisineTypes: cuisineTypes.isEmpty
                 ? setupState.selectedCuisineTypes

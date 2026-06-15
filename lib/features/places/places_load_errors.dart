@@ -26,13 +26,15 @@ String placesLoadErrorMessage(
     );
     return switch (error.code) {
       'not-found' =>
-        'Restaurant search is not deployed yet. Deploy Cloud Functions with searchRestaurants.',
+        'Location search is not available yet. Deploy Cloud Functions with searchLocationSuggestions.',
       'failed-precondition' =>
         'Server is missing RAPIDAPI_KEY. Set the secret and redeploy functions.',
       'unauthenticated' => 'Sign in again to load restaurants.',
       'permission-denied' => 'You do not have access to restaurant search.',
       'unavailable' =>
         'Restaurant search is temporarily unavailable. Try again shortly.',
+      'resource-exhausted' =>
+        'Daily Places API limit reached. Try again tomorrow or upgrade your RapidAPI plan.',
       'deadline-exceeded' =>
         'Restaurant search timed out. Try again with a smaller radius.',
       _ =>

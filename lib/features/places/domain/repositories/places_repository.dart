@@ -1,3 +1,4 @@
+import '../entities/location_suggestion.dart';
 import '../entities/place.dart';
 
 class PlaceSearchResult {
@@ -53,6 +54,8 @@ class PlaceDetails {
 abstract class PlacesRepository {
   Future<GeocodedLocation> geocodeLocation(String query);
 
+  Future<List<LocationSuggestion>> searchLocationSuggestions(String query);
+
   Future<PlaceSearchResult> searchRestaurants({
     required double lat,
     required double lng,
@@ -66,4 +69,6 @@ abstract class PlacesRepository {
   });
 
   Future<PlaceDetails> getPlaceDetails(String placeId);
+
+  Future<String?> resolvePlacePhoto(String photoName);
 }
