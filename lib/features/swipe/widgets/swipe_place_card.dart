@@ -1,11 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_design_system.dart';
 import '../../places/domain/entities/place.dart';
+import '../../places/presentation/providers/place_photo_provider.dart';
 import 'swipe_avatar_stack.dart';
 
-class SwipePlaceCard extends StatelessWidget {
+class SwipePlaceCard extends ConsumerWidget {
   const SwipePlaceCard({
     super.key,
     required this.place,
@@ -16,15 +18,21 @@ class SwipePlaceCard extends StatelessWidget {
   final List<String> likedUserIds;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cachedPhotoUrl = place.photoUrl;
+    final lazyPhoto = place.photoName == null || place.photoName!.isEmpty
+        ? null
+        : ref.watch(placePhotoUrlProvider(place.photoName!));
+    final imageUrl = cachedPhotoUrl ?? lazyPhoto?.value;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(32),
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (place.photoUrl != null)
+          if (imageUrl != null)
             CachedNetworkImage(
-              imageUrl: place.photoUrl!,
+              imageUrl: imageUrl,
               fit: BoxFit.cover,
               fadeInDuration: const Duration(milliseconds: 120),
             )
