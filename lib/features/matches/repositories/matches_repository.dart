@@ -81,7 +81,7 @@ class MatchesRepository {
 
   Future<MatchFeedItem?> getMatch({
     required String roomId,
-    required int itemId,
+    required String itemId,
   }) async {
     final snapshot = await _roomRepository.getRoom(roomId);
     final roomData = snapshot.data();
@@ -93,7 +93,7 @@ class MatchesRepository {
         .collection('rooms')
         .doc(roomId.trim().toUpperCase())
         .collection('matches')
-        .doc('$itemId')
+        .doc(itemId)
         .get();
     if (!matchDoc.exists) {
       return null;

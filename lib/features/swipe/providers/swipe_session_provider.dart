@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/analytics_provider.dart';
@@ -11,6 +12,9 @@ import '../../movies/domain/entities/genre.dart';
 import '../../movies/domain/entities/movie.dart';
 import '../../movies/domain/entities/streaming_provider.dart';
 import '../../movies/presentation/providers/movies_providers.dart';
+import '../../places/domain/entities/place.dart';
+import '../../places/places_load_errors.dart';
+import '../../places/presentation/providers/places_providers.dart';
 import '../../rooms/models/room_filters.dart';
 import '../../rooms/providers/room_repository_provider.dart';
 import '../../../core/services/analytics/swipe_submit_outcome.dart';
@@ -19,45 +23,70 @@ import 'swipe_repository_provider.dart';
 
 class SwipeSessionState {
   const SwipeSessionState({
+    this.category = 'movies',
     this.movies = const <Movie>[],
+    this.places = const <Place>[],
     this.currentIndex = 0,
     this.isFetchingMore = false,
     this.errorMessage,
     this.endReached = false,
     this.queueIds = const <int>[],
+    this.placeQueueIds = const <String>[],
     this.visibleQueueIds = const <int>[],
+    this.visiblePlaceQueueIds = const <String>[],
     this.loadedVisibleCount = 0,
+    this.nextPageToken,
   });
 
+  final String category;
   final List<Movie> movies;
+  final List<Place> places;
   final int currentIndex;
   final bool isFetchingMore;
   final String? errorMessage;
   final bool endReached;
   final List<int> queueIds;
+  final List<String> placeQueueIds;
   final List<int> visibleQueueIds;
+  final List<String> visiblePlaceQueueIds;
   final int loadedVisibleCount;
+  final String? nextPageToken;
+
+  bool get isRestaurantRoom => category == 'restaurants';
 
   SwipeSessionState copyWith({
+    String? category,
     List<Movie>? movies,
+    List<Place>? places,
     int? currentIndex,
     bool? isFetchingMore,
     String? errorMessage,
     bool clearError = false,
     bool? endReached,
     List<int>? queueIds,
+    List<String>? placeQueueIds,
     List<int>? visibleQueueIds,
+    List<String>? visiblePlaceQueueIds,
     int? loadedVisibleCount,
+    String? nextPageToken,
+    bool clearNextPageToken = false,
   }) {
     return SwipeSessionState(
+      category: category ?? this.category,
       movies: movies ?? this.movies,
+      places: places ?? this.places,
       currentIndex: currentIndex ?? this.currentIndex,
       isFetchingMore: isFetchingMore ?? this.isFetchingMore,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       endReached: endReached ?? this.endReached,
       queueIds: queueIds ?? this.queueIds,
+      placeQueueIds: placeQueueIds ?? this.placeQueueIds,
       visibleQueueIds: visibleQueueIds ?? this.visibleQueueIds,
+      visiblePlaceQueueIds:
+          visiblePlaceQueueIds ?? this.visiblePlaceQueueIds,
       loadedVisibleCount: loadedVisibleCount ?? this.loadedVisibleCount,
+      nextPageToken:
+          clearNextPageToken ? null : (nextPageToken ?? this.nextPageToken),
     );
   }
 }
@@ -85,14 +114,25 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
   @override
   Future<SwipeSessionState> build() => _load();
 
-  /// Clears a stale persisted queue and re-runs [build].
   Future<void> retry({bool clearQueue = true}) async {
     if (clearQueue) {
       try {
-        await ref.read(roomRepositoryProvider).upsertMovieQueue(
-              roomId: roomId,
-              movieQueue: const <int>[],
-            );
+        final currentCategory =
+            state.asData?.value.category ??
+            (await ref.read(roomRepositoryProvider).getRoom(roomId))
+                .data()?['category'] as String? ??
+            'movies';
+        if (currentCategory == 'restaurants') {
+          await ref.read(roomRepositoryProvider).upsertPlaceQueue(
+                roomId: roomId,
+                placeQueue: const <String>[],
+              );
+        } else {
+          await ref.read(roomRepositoryProvider).upsertMovieQueue(
+                roomId: roomId,
+                movieQueue: const <int>[],
+              );
+        }
       } catch (error, stackTrace) {
         unawaited(
           ref.read(crashReportingServiceProvider).recordError(
@@ -110,7 +150,35 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
     final uid = ref.read(authRepositoryProvider).currentUser?.uid;
     final roomSnapshot = await ref.read(roomRepositoryProvider).getRoom(roomId);
     final roomData = roomSnapshot.data() ?? const <String, dynamic>{};
+    final category = (roomData['category'] as String? ?? 'movies').toLowerCase();
 
+    try {
+      if (category == 'restaurants') {
+        return await _loadRestaurantDeck(roomData, uid);
+      }
+      return await _loadMovieDeck(roomData, uid);
+    } catch (error, stackTrace) {
+      debugPrint('[SwipeSession] Load failed for $roomId ($category): $error');
+      debugPrint('$stackTrace');
+      unawaited(
+        ref.read(crashReportingServiceProvider).recordError(
+              error,
+              stackTrace,
+              fatal: false,
+            ),
+      );
+      return SwipeSessionState(
+        category: category,
+        endReached: true,
+        errorMessage: placesLoadErrorMessage(error, category: category),
+      );
+    }
+  }
+
+  Future<SwipeSessionState> _loadMovieDeck(
+    Map<String, dynamic> roomData,
+    String? uid,
+  ) async {
     final filters = await _resolveFilters(roomData['filters']);
     final members = (roomData['members'] as List? ?? const <dynamic>[])
         .whereType<String>()
@@ -147,6 +215,7 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
 
     if (movies.isEmpty) {
       return SwipeSessionState(
+        category: 'movies',
         endReached: true,
         queueIds: queueIds,
         visibleQueueIds: const <int>[],
@@ -172,6 +241,7 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
     }
 
     return SwipeSessionState(
+      category: 'movies',
       movies: movies,
       currentIndex: 0,
       endReached: false,
@@ -179,6 +249,138 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
       visibleQueueIds: visibleQueueIds,
       loadedVisibleCount: movies.length,
     );
+  }
+
+  Future<SwipeSessionState> _loadRestaurantDeck(
+    Map<String, dynamic> roomData,
+    String? uid,
+  ) async {
+    final filters = _parseRoomFilters(roomData['filters']);
+    final members = (roomData['members'] as List? ?? const <dynamic>[])
+        .whereType<String>()
+        .toList(growable: false);
+    _genreLabel = 'restaurants';
+    _roomSize = members.isEmpty ? 1 : members.length;
+
+    if (!_loggedSessionStart) {
+      _loggedSessionStart = true;
+      final analytics = ref.read(analyticsServiceProvider);
+      unawaited(analytics.logSwipeSessionStarted());
+      unawaited(analytics.logScreenView(AnalyticsScreens.swipe));
+    }
+
+    if (filters.lat == 0 || filters.lng == 0) {
+      debugPrint(
+        '[SwipeSession] Restaurant room $roomId missing location '
+        '(lat=${filters.lat}, lng=${filters.lng})',
+      );
+      return const SwipeSessionState(
+        category: 'restaurants',
+        endReached: true,
+        errorMessage:
+            'This room needs a location. Edit room setup and pick an area.',
+      );
+    }
+
+    final swipedIds = uid == null
+        ? <String>{}
+        : await ref.read(swipeRepositoryProvider).getSwipedPlaceIds(
+            roomId: roomId,
+            userId: uid,
+          );
+
+    var queueIds = _parsePlaceQueueIds(roomData['placeQueue']);
+    debugPrint(
+      '[SwipeSession] Loading restaurants for $roomId at '
+      '${filters.lat},${filters.lng} radius=${filters.radiusMeters}m',
+    );
+    final searchResult = await ref.read(placesRepositoryProvider).searchRestaurants(
+          lat: filters.lat,
+          lng: filters.lng,
+          radiusMeters: filters.radiusMeters,
+          minRating: filters.minRating,
+          priceLevels: filters.priceLevels,
+          cuisineTypes: filters.cuisineTypes.isEmpty
+              ? const <String>['restaurant']
+              : filters.cuisineTypes,
+          openNow: filters.openNow,
+          excludedPlaceIds: swipedIds.toList(growable: false),
+        );
+
+    var places = _buildPlaceDeck(
+      discovered: searchResult.places,
+      queueIds: queueIds,
+      swipedIds: swipedIds,
+    );
+
+    if (places.isEmpty) {
+      return SwipeSessionState(
+        category: 'restaurants',
+        endReached: true,
+        placeQueueIds: queueIds,
+        visiblePlaceQueueIds: const <String>[],
+        errorMessage: swipedIds.isNotEmpty
+            ? 'No new restaurants left nearby. Widen radius or tap Try Again.'
+            : 'No restaurants found nearby. Widen radius or change cuisine filters.',
+      );
+    }
+
+    var visibleQueueIds = queueIds
+        .where((id) => !swipedIds.contains(id))
+        .toList(growable: false);
+
+    if (queueIds.isEmpty || visibleQueueIds.isEmpty) {
+      queueIds = places.map((place) => place.placeId).toList(growable: false);
+      visibleQueueIds = queueIds;
+      unawaited(
+        ref.read(roomRepositoryProvider).upsertPlaceQueue(
+              roomId: roomId,
+              placeQueue: queueIds,
+            ),
+      );
+    }
+
+    return SwipeSessionState(
+      category: 'restaurants',
+      places: places,
+      currentIndex: 0,
+      endReached: false,
+      placeQueueIds: queueIds,
+      visiblePlaceQueueIds: visibleQueueIds,
+      loadedVisibleCount: places.length,
+      nextPageToken: searchResult.nextPageToken,
+    );
+  }
+
+  List<Place> _buildPlaceDeck({
+    required List<Place> discovered,
+    required List<String> queueIds,
+    required Set<String> swipedIds,
+  }) {
+    final byId = {for (final place in discovered) place.placeId: place};
+    final deck = <Place>[];
+
+    for (final id in queueIds) {
+      if (swipedIds.contains(id)) {
+        continue;
+      }
+      final cached = byId[id];
+      if (cached != null) {
+        deck.add(cached);
+      }
+    }
+
+    for (final place in discovered) {
+      if (swipedIds.contains(place.placeId)) {
+        continue;
+      }
+      if (deck.any((entry) => entry.placeId == place.placeId)) {
+        continue;
+      }
+      deck.add(place);
+    }
+
+    return deck;
   }
 
   Future<List<Movie>> _fetchDeckFromDiscover({
@@ -286,6 +488,15 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
     return ids;
   }
 
+  List<String> _parsePlaceQueueIds(Object? rawQueue) {
+    if (rawQueue is! List) {
+      return const <String>[];
+    }
+    return rawQueue.map((entry) => '$entry').where((id) => id.isNotEmpty).toList(
+          growable: false,
+        );
+  }
+
   Future<RoomFilters> _resolveFilters(Object? rawFilters) async {
     final map = _toStringDynamicMap(rawFilters);
     if (map == null) {
@@ -322,6 +533,13 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
       minRating: (map['minRating'] as num?)?.toDouble() ?? 0,
       releaseYear: (map['releaseYear'] as num?)?.toInt() ?? 0,
       sortBy: map['sortBy'] as String? ?? 'popularity.desc',
+      locationLabel: map['locationLabel'] as String? ?? '',
+      lat: (map['lat'] as num?)?.toDouble() ?? 0,
+      lng: (map['lng'] as num?)?.toDouble() ?? 0,
+      radiusMeters: (map['radiusMeters'] as num?)?.toInt() ?? 5000,
+      priceLevels: _parseIntList(map['priceLevels']),
+      cuisineTypes: _stringList(map['cuisineTypes']),
+      openNow: map['openNow'] as bool? ?? false,
     );
   }
 
@@ -401,6 +619,19 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
     if (current == null || uid == null) {
       return;
     }
+
+    if (current.isRestaurantRoom) {
+      await _submitPlaceSwipe(current, uid, decision);
+      return;
+    }
+    await _submitMovieSwipe(current, uid, decision);
+  }
+
+  Future<void> _submitMovieSwipe(
+    SwipeSessionState current,
+    String uid,
+    SwipeDecision decision,
+  ) async {
     if (current.currentIndex >= current.movies.length) {
       return;
     }
@@ -439,6 +670,63 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
       return;
     }
 
+    await _afterSwipeSubmitted(current, movie.id, decision, outcome);
+  }
+
+  Future<void> _submitPlaceSwipe(
+    SwipeSessionState current,
+    String uid,
+    SwipeDecision decision,
+  ) async {
+    if (current.currentIndex >= current.places.length) {
+      return;
+    }
+
+    final place = current.places[current.currentIndex];
+    final queueIndex = current.placeQueueIds.indexOf(place.placeId);
+    final nextIndex =
+        queueIndex < 0 ? current.currentIndex + 1 : queueIndex + 1;
+
+    final nextLocalIndex = current.currentIndex + 1;
+    state = AsyncData(
+      current.copyWith(
+        currentIndex: nextLocalIndex,
+        endReached: nextLocalIndex >= current.places.length &&
+            current.loadedVisibleCount >= current.visiblePlaceQueueIds.length &&
+            current.nextPageToken == null,
+      ),
+    );
+
+    SwipeSubmitOutcome outcome;
+    try {
+      outcome = await ref.read(swipeRepositoryProvider).submitPlaceSwipe(
+            roomId: roomId,
+            userId: uid,
+            place: place,
+            decision: decision,
+            nextIndex: nextIndex,
+          );
+    } catch (error, stackTrace) {
+      state = AsyncData(current);
+      unawaited(
+        ref.read(crashReportingServiceProvider).recordError(
+              error,
+              stackTrace,
+              fatal: false,
+            ),
+      );
+      return;
+    }
+
+    await _afterSwipeSubmitted(current, place.placeId.hashCode, decision, outcome);
+  }
+
+  Future<void> _afterSwipeSubmitted(
+    SwipeSessionState current,
+    int analyticsItemId,
+    SwipeDecision decision,
+    SwipeSubmitOutcome outcome,
+  ) async {
     _sessionSwipeCount += 1;
     if (outcome.matchCreated) {
       _sessionMatchCount += 1;
@@ -449,17 +737,17 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
     unawaited(
       switch (decision) {
         SwipeDecision.liked => analytics.logMovieLiked(
-            movieId: movie.id,
+            movieId: analyticsItemId,
             genre: _genreLabel,
             roomSize: roomSize,
           ),
         SwipeDecision.disliked => analytics.logMovieDisliked(
-            movieId: movie.id,
+            movieId: analyticsItemId,
             genre: _genreLabel,
             roomSize: roomSize,
           ),
         SwipeDecision.maybe => analytics.logMovieMaybe(
-            movieId: movie.id,
+            movieId: analyticsItemId,
             genre: _genreLabel,
             roomSize: roomSize,
           ),
@@ -486,6 +774,12 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
     if (current == null || current.isFetchingMore) {
       return;
     }
+
+    if (current.isRestaurantRoom) {
+      await _fetchMorePlacesIfNeeded(current);
+      return;
+    }
+
     final remainingLoaded = current.movies.length - current.currentIndex;
     if (remainingLoaded > 4) {
       return;
@@ -538,6 +832,81 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
         current.copyWith(
           isFetchingMore: false,
           errorMessage: 'Could not load more movies.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _fetchMorePlacesIfNeeded(SwipeSessionState current) async {
+    final remainingLoaded = current.places.length - current.currentIndex;
+    if (remainingLoaded > 4) {
+      return;
+    }
+
+    if (current.nextPageToken == null &&
+        current.loadedVisibleCount >= current.visiblePlaceQueueIds.length) {
+      state = AsyncData(
+        current.copyWith(
+          endReached: current.currentIndex >= current.places.length,
+        ),
+      );
+      return;
+    }
+
+    state = AsyncData(current.copyWith(isFetchingMore: true, clearError: true));
+
+    try {
+      final roomSnapshot = await ref.read(roomRepositoryProvider).getRoom(roomId);
+      final filters = _parseRoomFilters(roomSnapshot.data()?['filters']);
+      final uid = ref.read(authRepositoryProvider).currentUser?.uid;
+      final swipedIds = uid == null
+          ? <String>{}
+          : await ref.read(swipeRepositoryProvider).getSwipedPlaceIds(
+              roomId: roomId,
+              userId: uid,
+            );
+      final alreadyLoaded =
+          current.places.map((place) => place.placeId).toSet();
+
+      final searchResult =
+          await ref.read(placesRepositoryProvider).searchRestaurants(
+                lat: filters.lat,
+                lng: filters.lng,
+                radiusMeters: filters.radiusMeters,
+                minRating: filters.minRating,
+                priceLevels: filters.priceLevels,
+                cuisineTypes: filters.cuisineTypes.isEmpty
+                    ? const <String>['restaurant']
+                    : filters.cuisineTypes,
+                openNow: filters.openNow,
+                pageToken: current.nextPageToken,
+                excludedPlaceIds: {
+                  ...swipedIds,
+                  ...alreadyLoaded,
+                }.toList(growable: false),
+              );
+
+      final newPlaces = searchResult.places
+          .where((place) => !alreadyLoaded.contains(place.placeId))
+          .toList(growable: false);
+      final mergedPlaces = List<Place>.from(current.places)..addAll(newPlaces);
+
+      state = AsyncData(
+        current.copyWith(
+          places: mergedPlaces,
+          loadedVisibleCount: mergedPlaces.length,
+          isFetchingMore: false,
+          nextPageToken: searchResult.nextPageToken,
+          endReached: newPlaces.isEmpty &&
+              searchResult.nextPageToken == null &&
+              current.currentIndex >= mergedPlaces.length,
+        ),
+      );
+    } catch (_) {
+      state = AsyncData(
+        current.copyWith(
+          isFetchingMore: false,
+          errorMessage: 'Could not load more restaurants.',
         ),
       );
     }

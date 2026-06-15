@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../models/match_overlay_data.dart';
 import '../swipe_movie_card.dart';
+import '../swipe_place_card.dart';
 
-/// Single matched movie card for the celebration overlay.
+/// Single matched card for the celebration overlay.
 class MatchMatchedMovieCard extends StatelessWidget {
   const MatchMatchedMovieCard({
     super.key,
@@ -40,10 +41,15 @@ class MatchMatchedMovieCard extends StatelessWidget {
           padding: const EdgeInsets.all(1.5),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(26.5),
-            child: SwipeMovieCard(
-              movie: data.movie,
-              likedUserIds: data.likedUserIds,
-            ),
+            child: data.place != null
+                ? SwipePlaceCard(
+                    place: data.place!,
+                    likedUserIds: data.likedUserIds,
+                  )
+                : SwipeMovieCard(
+                    movie: data.movie!,
+                    likedUserIds: data.likedUserIds,
+                  ),
           ),
         ),
       ),

@@ -20,6 +20,21 @@ _RoomFilters _$RoomFiltersFromJson(Map<String, dynamic> json) => _RoomFilters(
   minRating: (json['minRating'] as num?)?.toDouble() ?? 0,
   releaseYear: (json['releaseYear'] as num?)?.toInt() ?? 0,
   sortBy: json['sortBy'] as String? ?? 'popularity.desc',
+  locationLabel: json['locationLabel'] as String? ?? '',
+  lat: (json['lat'] as num?)?.toDouble() ?? 0,
+  lng: (json['lng'] as num?)?.toDouble() ?? 0,
+  radiusMeters: (json['radiusMeters'] as num?)?.toInt() ?? 5000,
+  priceLevels:
+      (json['priceLevels'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
+          .toList() ??
+      const <int>[],
+  cuisineTypes:
+      (json['cuisineTypes'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const <String>[],
+  openNow: json['openNow'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$RoomFiltersToJson(_RoomFilters instance) =>
@@ -29,4 +44,11 @@ Map<String, dynamic> _$RoomFiltersToJson(_RoomFilters instance) =>
       'minRating': instance.minRating,
       'releaseYear': instance.releaseYear,
       'sortBy': instance.sortBy,
+      'locationLabel': instance.locationLabel,
+      'lat': instance.lat,
+      'lng': instance.lng,
+      'radiusMeters': instance.radiusMeters,
+      'priceLevels': instance.priceLevels,
+      'cuisineTypes': instance.cuisineTypes,
+      'openNow': instance.openNow,
     };

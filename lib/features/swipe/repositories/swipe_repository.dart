@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/analytics/analytics_service.dart';
 import '../../../core/services/analytics/swipe_submit_outcome.dart';
 import '../../movies/domain/entities/movie.dart';
+import '../../places/domain/entities/place.dart';
 import '../models/swipe_decision.dart';
 import '../models/swipe_match.dart';
 
@@ -39,6 +40,26 @@ class SwipeRepository {
         .toSet();
   }
 
+  Future<Set<String>> getSwipedPlaceIds({
+    required String roomId,
+    required String userId,
+  }) async {
+    final snapshot = await _swipes(roomId)
+        .where('userId', isEqualTo: userId)
+        .get();
+    return snapshot.docs
+        .map((doc) {
+          final data = doc.data();
+          final itemType = data['itemType'] as String?;
+          if (itemType == 'place') {
+            return data['itemId'] as String?;
+          }
+          return null;
+        })
+        .whereType<String>()
+        .toSet();
+  }
+
   Future<int> getUserProgressIndex({
     required String roomId,
     required String userId,
@@ -65,12 +86,30 @@ class SwipeRepository {
         });
   }
 
+  Stream<List<String>> watchLikedUserIdsForPlace({
+    required String roomId,
+    required String placeId,
+  }) {
+    return _swipes(roomId)
+        .where('itemId', isEqualTo: placeId)
+        .where('itemType', isEqualTo: 'place')
+        .where('action', isEqualTo: SwipeDecision.liked.wireValue)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => doc.data()['userId'] as String?)
+              .whereType<String>()
+              .toSet()
+              .toList(growable: false);
+        });
+  }
+
   Stream<List<SwipeMatch>> watchMatches(String roomId) {
     return _matches(
       roomId,
     ).orderBy('createdAt', descending: true).snapshots().map((snapshot) {
       return snapshot.docs
-          .map((doc) => SwipeMatch.fromMap(doc.data()))
+          .map((doc) => SwipeMatch.fromMap(doc.data(), docId: doc.id))
           .toList(growable: false);
     });
   }
@@ -81,14 +120,79 @@ class SwipeRepository {
     required Movie movie,
     required SwipeDecision decision,
     required int nextIndex,
+  }) {
+    return _submitItemSwipe(
+      roomId: roomId,
+      userId: userId,
+      itemType: 'movie',
+      itemId: '${movie.id}',
+      matchDocId: '${movie.id}',
+      title: movie.title,
+      posterPath: movie.posterPath,
+      googleMapsUri: null,
+      movieId: movie.id,
+      queryField: 'movieId',
+      queryValue: movie.id,
+      decision: decision,
+      nextIndex: nextIndex,
+    );
+  }
+
+  Future<SwipeSubmitOutcome> submitPlaceSwipe({
+    required String roomId,
+    required String userId,
+    required Place place,
+    required SwipeDecision decision,
+    required int nextIndex,
+  }) {
+    return _submitItemSwipe(
+      roomId: roomId,
+      userId: userId,
+      itemType: 'place',
+      itemId: place.placeId,
+      matchDocId: place.placeId,
+      title: place.name,
+      posterPath: place.photoUrl,
+      googleMapsUri: place.googleMapsUri,
+      movieId: null,
+      queryField: 'itemId',
+      queryValue: place.placeId,
+      decision: decision,
+      nextIndex: nextIndex,
+    );
+  }
+
+  Future<SwipeSubmitOutcome> _submitItemSwipe({
+    required String roomId,
+    required String userId,
+    required String itemType,
+    required String itemId,
+    required String matchDocId,
+    required String title,
+    required String? posterPath,
+    required String? googleMapsUri,
+    required int? movieId,
+    required String queryField,
+    required Object queryValue,
+    required SwipeDecision decision,
+    required int nextIndex,
   }) async {
-    final swipeDocId = '${movie.id}_$userId';
-    await _swipes(roomId).doc(swipeDocId).set({
-      'movieId': movie.id,
+    final swipeDocId = '${itemId}_$userId';
+    final swipePayload = <String, dynamic>{
+      'itemType': itemType,
+      'itemId': itemId,
       'userId': userId,
       'action': decision.wireValue,
       'createdAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    };
+    if (movieId != null) {
+      swipePayload['movieId'] = movieId;
+    }
+
+    await _swipes(roomId).doc(swipeDocId).set(
+      swipePayload,
+      SetOptions(merge: true),
+    );
 
     await _progress(roomId).doc(userId).set({
       'currentIndex': nextIndex,
@@ -105,13 +209,16 @@ class SwipeRepository {
       return const SwipeSubmitOutcome();
     }
 
-    final movieSwipes = await _swipes(roomId)
-        .where('movieId', isEqualTo: movie.id)
-        .get();
+    Query<Map<String, dynamic>> swipeQuery = _swipes(roomId);
+    swipeQuery = swipeQuery.where(queryField, isEqualTo: queryValue);
+    if (itemType == 'place') {
+      swipeQuery = swipeQuery.where('itemType', isEqualTo: 'place');
+    }
+    final itemSwipes = await swipeQuery.get();
 
     final likedUserIds = <String>{};
     final dislikedUserIds = <String>{};
-    for (final doc in movieSwipes.docs) {
+    for (final doc in itemSwipes.docs) {
       final data = doc.data();
       final uid = data['userId'] as String?;
       final action = data['action'] as String?;
@@ -136,7 +243,7 @@ class SwipeRepository {
       );
     }
 
-    final matchRef = _matches(roomId).doc('${movie.id}');
+    final matchRef = _matches(roomId).doc(matchDocId);
     final existingMatch = await matchRef.get();
     final previousLikeCount = existingMatch.exists
         ? _likedByCount(existingMatch.data())
@@ -150,14 +257,21 @@ class SwipeRepository {
     final score = likedUserIds.length / memberCount;
 
     final matchPayload = <String, dynamic>{
-      'movieId': movie.id,
-      'title': movie.title,
-      'posterPath': movie.posterPath,
+      'itemType': itemType,
+      'itemId': itemId,
+      'title': title,
+      'posterPath': posterPath,
       'likedBy': likedUserIds.toList(growable: false),
       'dislikedBy': dislikedUserIds.toList(growable: false),
       'matchType': matchType,
       'score': score,
     };
+    if (movieId != null) {
+      matchPayload['movieId'] = movieId;
+    }
+    if (googleMapsUri != null) {
+      matchPayload['googleMapsUri'] = googleMapsUri;
+    }
     if (!existingMatch.exists) {
       matchPayload['createdAt'] = FieldValue.serverTimestamp();
     }

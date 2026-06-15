@@ -17,6 +17,7 @@ class MatchFeedItem {
     required this.matchedCount,
     required this.roomMemberCount,
     required this.matchedAt,
+    this.googleMapsUri,
   });
 
   final String id;
@@ -24,9 +25,10 @@ class MatchFeedItem {
   final String roomName;
   final String roomCategoryId;
   final String roomEmoji;
-  final int itemId;
+  final String itemId;
   final String itemName;
   final String? posterPath;
+  final String? googleMapsUri;
   final String matchType;
   final List<String> matchedMemberIds;
   final int matchedCount;
@@ -34,6 +36,8 @@ class MatchFeedItem {
   final DateTime? matchedAt;
 
   bool get isPerfect => matchType == 'perfect';
+
+  int? get movieId => int.tryParse(itemId);
 
   String? get posterUrl {
     if (posterPath == null || posterPath!.isEmpty) {
@@ -67,14 +71,15 @@ class MatchFeedItem {
         : members.length;
 
     return MatchFeedItem(
-      id: '${roomId}_${match.movieId}',
+      id: '${roomId}_${match.itemId}',
       roomId: roomId.toUpperCase(),
       roomName: roomData['name'] as String? ?? '${roomId.toUpperCase()} Room',
       roomCategoryId: categoryId,
       roomEmoji: RoomPreview.categoryEmoji(categoryId),
-      itemId: match.movieId,
+      itemId: match.itemId,
       itemName: match.title,
       posterPath: match.posterPath,
+      googleMapsUri: match.googleMapsUri,
       matchType: match.matchType,
       matchedMemberIds: match.likedBy,
       matchedCount: match.likedBy.length,

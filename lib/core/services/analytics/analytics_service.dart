@@ -56,12 +56,12 @@ abstract class AnalyticsService {
 
   Future<void> logMatchCardOpened({
     required String roomId,
-    required int itemId,
+    required String itemId,
   });
 
   Future<void> logMatchShared({
     required String roomId,
-    required int itemId,
+    required String itemId,
   });
 
   Future<void> setUserProperty({

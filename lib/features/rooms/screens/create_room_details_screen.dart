@@ -13,6 +13,7 @@ import '../providers/create_join_room_provider.dart';
 import '../providers/rooms_provider.dart';
 import '../providers/room_setup_provider.dart';
 import '../theme/app_create_room_details_tokens.dart';
+import '../widgets/restaurant_room_filters_section.dart';
 
 class CreateRoomDetailsScreen extends ConsumerStatefulWidget {
   const CreateRoomDetailsScreen({
@@ -46,10 +47,18 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
   @override
   void initState() {
     super.initState();
-    ref.read(roomSetupProvider.notifier).bindCategory(widget.category);
-    final initialName = ref.read(roomSetupProvider).roomName;
-    _roomNameController = TextEditingController(text: initialName)
+    _roomNameController = TextEditingController()
       ..addListener(_onRoomNameChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      ref.read(roomSetupProvider.notifier).bindCategory(widget.category);
+      final initialName = ref.read(roomSetupProvider).roomName;
+      _isSyncingRoomNameFromState = true;
+      _roomNameController.text = initialName;
+      _isSyncingRoomNameFromState = false;
+    });
   }
 
   @override
@@ -128,6 +137,21 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
           final sortBy = sortByRaw is String && sortByRaw.isNotEmpty
               ? sortByRaw
               : setupState.selectedSortBy;
+          final locationLabel = filters['locationLabel'] as String? ?? '';
+          final lat = (filters['lat'] as num?)?.toDouble() ?? 0;
+          final lng = (filters['lng'] as num?)?.toDouble() ?? 0;
+          final radiusMeters = (filters['radiusMeters'] as num?)?.toInt() ?? 5000;
+          final priceLevels = Set<int>.from(
+            (filters['priceLevels'] as List? ?? const <dynamic>[])
+                .whereType<num>()
+                .map((value) => value.toInt()),
+          );
+          final cuisineTypes = Set<String>.from(
+            (filters['cuisineTypes'] as List? ?? const <dynamic>[])
+                .map((value) => '$value')
+                .where((value) => value.isNotEmpty),
+          );
+          final openNow = filters['openNow'] as bool? ?? false;
 
           setupNotifier.hydrateFromRoomData(
             category: widget.category,
@@ -139,6 +163,15 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
             minimumRating: minRating,
             releaseYear: releaseYear,
             sortBy: sortBy,
+            locationLabel: locationLabel,
+            lat: lat,
+            lng: lng,
+            radiusKm: (radiusMeters / 1000).round().clamp(1, 15),
+            priceLevels: priceLevels,
+            cuisineTypes: cuisineTypes.isEmpty
+                ? setupState.selectedCuisineTypes
+                : cuisineTypes,
+            openNow: openNow,
           );
 
           _hydratedFromRoom = true;
@@ -148,6 +181,7 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
     }
 
     if (editingRoomId == null &&
+        widget.category == RoomDecisionCategory.movies &&
         !_defaultGenresApplied &&
         setupState.selectedGenreIds.isEmpty) {
       genresAsync.whenData((genres) {
@@ -256,6 +290,7 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
                         const SizedBox(
                           height: AppCreateRoomDetailsTokens.roomNameFieldBottomGap,
                         ),
+                        if (widget.category != RoomDecisionCategory.restaurants) ...[
                         _SectionLabel(
                           label: 'Choose the mood',
                           fontSize: 16,
@@ -272,6 +307,7 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
                         const SizedBox(
                           height: AppCreateRoomDetailsTokens.moodSectionBottomGap,
                         ),
+                        ],
                         Row(
                           children: [
                             _SectionLabel(
@@ -310,6 +346,9 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
                         const SizedBox(
                           height: AppCreateRoomDetailsTokens.filtersHeaderBottomGap,
                         ),
+                        if (widget.category == RoomDecisionCategory.restaurants)
+                          const RestaurantRoomFiltersSection()
+                        else ...[
                         _InlineFilterSectionTitle(
                           icon: '🎬',
                           title: 'Genres',
@@ -426,6 +465,7 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
                         const SizedBox(
                           height: AppCreateRoomDetailsTokens.filterCardGap,
                         ),
+                        ],
                         if (errorMessage != null) ...[
                           const SizedBox(height: AppSpacing.small),
                           Text(

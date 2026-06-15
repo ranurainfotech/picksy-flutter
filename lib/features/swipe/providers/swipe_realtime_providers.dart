@@ -13,6 +13,16 @@ final movieLikedUserIdsProvider = StreamProvider.autoDispose
           );
     });
 
+final placeLikedUserIdsProvider = StreamProvider.autoDispose
+    .family<List<String>, ({String roomId, String placeId})>((ref, params) {
+      return ref
+          .watch(swipeRepositoryProvider)
+          .watchLikedUserIdsForPlace(
+            roomId: params.roomId,
+            placeId: params.placeId,
+          );
+    });
+
 final roomMatchesProvider = StreamProvider.autoDispose
     .family<List<SwipeMatch>, String>((ref, roomId) {
       return ref.watch(swipeRepositoryProvider).watchMatches(roomId);

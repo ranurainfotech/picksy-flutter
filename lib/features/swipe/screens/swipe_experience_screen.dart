@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_design_system.dart';
 import '../../../routes/app_routes.dart';
 import '../../movies/domain/entities/movie.dart';
+import '../../places/domain/entities/place.dart';
+import '../../places/places_load_errors.dart';
 import '../../rooms/providers/rooms_provider.dart';
 import '../../rooms/theme/app_rooms_tokens.dart';
 import '../models/swipe_decision.dart';
@@ -19,6 +21,7 @@ import '../widgets/swipe_drag_feedback_overlay.dart';
 import '../models/match_overlay_data.dart';
 import '../widgets/match_overlay/match_overlay_widget.dart';
 import '../widgets/swipe_movie_card.dart';
+import '../widgets/swipe_place_card.dart';
 import '../widgets/swipe_top_bar.dart';
 
 class SwipeExperienceScreen extends ConsumerStatefulWidget {
@@ -36,7 +39,7 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
   static const _dragFeedbackMaxCards = 3;
 
   final ValueNotifier<Offset> _dragOffset = ValueNotifier<Offset>(Offset.zero);
-  final Set<int> _celebratedMatchIds = <int>{};
+  final Set<String> _celebratedMatchIds = <String>{};
   final List<MatchOverlayData> _matchOverlayQueue = <MatchOverlayData>[];
   MatchOverlayData? _activeMatchOverlay;
   bool _isAnimatingOut = false;
@@ -85,7 +88,7 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
           ),
           if (_activeMatchOverlay != null)
             MatchOverlayWidget(
-              key: ValueKey(_activeMatchOverlay!.match.movieId),
+              key: ValueKey(_activeMatchOverlay!.match.matchKey),
               data: _activeMatchOverlay!,
               onDismiss: _dismissMatchOverlay,
               onAddToWatchlist: () {
@@ -109,9 +112,14 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
   ) {
     final room = roomAsync.asData?.value ?? const <String, dynamic>{};
     final roomName = room['name'] as String? ?? 'Saturday Night 🍿';
+    final roomCategory = (room['category'] as String? ?? 'movies').toLowerCase();
+    final isRestaurantRoom = roomCategory == 'restaurants';
     final memberIds = (room['members'] as List? ?? const <dynamic>[])
         .whereType<String>()
         .toList(growable: false);
+    final emptyLabel = isRestaurantRoom
+        ? 'No restaurants found nearby.'
+        : 'No movies found for selected filters.';
 
     if (sessionAsync.isLoading) {
       return Column(
@@ -122,9 +130,21 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
             memberIds: memberIds,
           ),
           const SizedBox(height: 10),
-          const Expanded(
-            child: Center(
-              child: CircularProgressIndicator(color: AppColors.neonPink),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(color: AppColors.neonPink),
+                const SizedBox(height: 16),
+                Text(
+                  isRestaurantRoom
+                      ? 'Finding restaurants nearby...'
+                      : 'Loading picks...',
+                  style: AppTypography.bodyRegular.copyWith(
+                    color: AppColors.secondaryText,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -147,18 +167,35 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
           ),
         ],
       ),
-      error: (_, _) => Column(
-        children: [
-          _Header(
-            roomId: widget.roomId,
-            roomName: roomName,
-            memberIds: memberIds,
-          ),
-          const SizedBox(height: 10),
-          Expanded(child: _EmptyState(onRetry: _retrySwipeSession)),
-        ],
-      ),
+      error: (error, stackTrace) {
+        debugPrint('[SwipeExperience] session error: $error');
+        debugPrint('$stackTrace');
+        return Column(
+          children: [
+            _Header(
+              roomId: widget.roomId,
+              roomName: roomName,
+              memberIds: memberIds,
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: _EmptyState(
+                message: placesLoadErrorMessage(
+                  error,
+                  category: roomCategory,
+                ),
+                emptyLabel: emptyLabel,
+                onRetry: _retrySwipeSession,
+              ),
+            ),
+          ],
+        );
+      },
       data: (currentUi) {
+        if (currentUi.isRestaurantRoom) {
+          return _buildRestaurantSwipe(context, roomName, memberIds, currentUi);
+        }
+
         if (currentUi.movies.isEmpty || currentUi.currentIndex >= currentUi.movies.length) {
           return Column(
             children: [
@@ -171,6 +208,7 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
               Expanded(
                 child: _EmptyState(
                   message: currentUi.errorMessage,
+                  emptyLabel: emptyLabel,
                   onRetry: _retrySwipeSession,
                 ),
               ),
@@ -309,14 +347,14 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
     }
 
     final previousMatches = previous?.asData?.value ?? const <SwipeMatch>[];
-    final previousByMovieId = {
-      for (final match in previousMatches) match.movieId: match,
+    final previousByMatchKey = {
+      for (final match in previousMatches) match.matchKey: match,
     };
 
     if (!_seededMatchIds) {
       for (final match in matches) {
         if (isGroupMatch(match, memberCount)) {
-          _celebratedMatchIds.add(match.movieId);
+          _celebratedMatchIds.add(match.matchKey);
         }
       }
       _seededMatchIds = true;
@@ -328,7 +366,7 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
         continue;
       }
 
-      final prior = previousByMovieId[match.movieId];
+      final prior = previousByMatchKey[match.matchKey];
       if (!matchJustCrossedThreshold(
         previous: prior,
         current: match,
@@ -336,39 +374,251 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
       )) {
         continue;
       }
-      if (!_celebratedMatchIds.add(match.movieId)) {
+      if (!_celebratedMatchIds.add(match.matchKey)) {
         continue;
       }
       if (!mounted) {
         return;
       }
-      _enqueueMatchOverlay(
-        MatchOverlayData(
-          match: match,
-          movie: _movieForMatch(match),
-          memberCount: memberCount,
-          likedUserIds: match.likedBy,
-        ),
-      );
+      _enqueueMatchOverlay(_overlayDataForMatch(match));
     }
   }
 
-  Movie _movieForMatch(SwipeMatch match) {
+  MatchOverlayData _overlayDataForMatch(SwipeMatch match) {
+    final room = ref.read(roomStreamProvider(widget.roomId)).asData?.value;
+    final memberIds = (room?['members'] as List? ?? const <dynamic>[])
+        .whereType<String>()
+        .toList(growable: false);
+    final memberCount = memberIds.length;
     final session = ref.read(swipeSessionProvider(widget.roomId)).asData?.value;
+
+    if (match.isPlace) {
+      Place? place;
+      if (session != null) {
+        for (final entry in session.places) {
+          if (entry.placeId == match.itemId) {
+            place = entry;
+            break;
+          }
+        }
+      }
+      place ??= placeFromMatch(match);
+      return MatchOverlayData(
+        match: match,
+        place: place,
+        memberCount: memberCount,
+        likedUserIds: match.likedBy,
+      );
+    }
+
+    Movie? movie;
     if (session != null) {
-      for (final movie in session.movies) {
-        if (movie.id == match.movieId) {
-          return movie;
+      for (final entry in session.movies) {
+        if ('${entry.id}' == match.itemId) {
+          movie = entry;
+          break;
         }
       }
     }
-    return Movie(
-      id: match.movieId,
-      title: match.title,
-      overview: '',
-      posterPath: match.posterPath,
-      voteAverage: 0,
+    movie ??= movieFromMatch(match);
+    return MatchOverlayData(
+      match: match,
+      movie: movie,
+      memberCount: memberCount,
+      likedUserIds: match.likedBy,
     );
+  }
+
+  Widget _buildRestaurantSwipe(
+    BuildContext context,
+    String roomName,
+    List<String> memberIds,
+    SwipeSessionState currentUi,
+  ) {
+    if (currentUi.places.isEmpty ||
+        currentUi.currentIndex >= currentUi.places.length) {
+      return Column(
+        children: [
+          _Header(
+            roomId: widget.roomId,
+            roomName: roomName,
+            memberIds: memberIds,
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: _EmptyState(
+              message: currentUi.errorMessage,
+              onRetry: _retrySwipeSession,
+              emptyLabel: 'No restaurants found for selected filters.',
+            ),
+          ),
+        ],
+      );
+    }
+
+    _precacheUpcomingPlaces(context, currentUi.places, currentUi.currentIndex);
+    final showDragFeedback = currentUi.currentIndex < _dragFeedbackMaxCards;
+    final visiblePlace = currentUi.places[currentUi.currentIndex];
+    final likedUserIdsAsync = ref.watch(
+      placeLikedUserIdsProvider((
+        roomId: widget.roomId,
+        placeId: visiblePlace.placeId,
+      )),
+    );
+
+    return Column(
+      children: [
+        _Header(
+          roomId: widget.roomId,
+          roomName: roomName,
+          memberIds: memberIds,
+        ),
+        const SizedBox(height: 10),
+        Expanded(
+          child: Center(
+            child: SizedBox(
+              width: MediaQuery.sizeOf(context).width * 0.92,
+              height: MediaQuery.sizeOf(context).height * 0.68,
+              child: ValueListenableBuilder<Offset>(
+                valueListenable: _dragOffset,
+                builder: (context, dragOffset, _) {
+                  final dragProgress = _dragProgress(dragOffset);
+                  final horizontalLikeProgress =
+                      (dragOffset.dx / _swipeThresholdX).clamp(0.0, 1.0);
+                  final horizontalDislikeProgress =
+                      ((-dragOffset.dx) / _swipeThresholdX).clamp(0.0, 1.0);
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      for (var i = 2; i >= 0; i--)
+                        if (currentUi.currentIndex + i < currentUi.places.length)
+                          _PlaceCardLayer(
+                            place: currentUi.places[currentUi.currentIndex + i],
+                            layerIndex: i,
+                            dragProgress: dragProgress,
+                            dragOffset: i == 0 ? dragOffset : Offset.zero,
+                            showDragFeedback: showDragFeedback,
+                            likeFeedbackProgress:
+                                i == 0 ? horizontalLikeProgress : 0.0,
+                            dislikeFeedbackProgress:
+                                i == 0 ? horizontalDislikeProgress : 0.0,
+                            likedUserIds: i == 0
+                                ? (likedUserIdsAsync.asData?.value ??
+                                    const <String>[])
+                                : const <String>[],
+                            onPanUpdate: i == 0 ? _onPanUpdate : null,
+                            onPanEnd: i == 0
+                                ? () => _onPanEndPlace(widget.roomId, visiblePlace)
+                                : null,
+                          ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        SwipeActionButtons(
+          onDislike: () => _triggerPlaceAction(
+            widget.roomId,
+            visiblePlace,
+            SwipeDecision.disliked,
+          ),
+          onMaybe: () => _triggerPlaceAction(
+            widget.roomId,
+            visiblePlace,
+            SwipeDecision.maybe,
+          ),
+          onLike: () => _triggerPlaceAction(
+            widget.roomId,
+            visiblePlace,
+            SwipeDecision.liked,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          '${currentUi.currentIndex + 1} of ${currentUi.places.length}',
+          style: AppTypography.bodyRegular.copyWith(
+            color: AppColors.secondaryText,
+          ),
+        ),
+        if (currentUi.isFetchingMore) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Loading more restaurants...',
+            style: AppTypography.caption.copyWith(
+              color: AppColors.secondaryText,
+            ),
+          ),
+        ],
+        if (currentUi.errorMessage != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            currentUi.errorMessage!,
+            style: AppTypography.caption.copyWith(color: AppColors.reject),
+          ),
+        ],
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  void _onPanEndPlace(String roomId, Place place) async {
+    if (_isAnimatingOut || _isMatchOverlayVisible) return;
+    final dragOffset = _dragOffset.value;
+    if (dragOffset.dx > _swipeThresholdX) {
+      await _triggerPlaceAction(roomId, place, SwipeDecision.liked);
+      return;
+    }
+    if (dragOffset.dx < -_swipeThresholdX) {
+      await _triggerPlaceAction(roomId, place, SwipeDecision.disliked);
+      return;
+    }
+    if (dragOffset.dy < _swipeThresholdY) {
+      await _triggerPlaceAction(roomId, place, SwipeDecision.maybe);
+      return;
+    }
+    _dragOffset.value = Offset.zero;
+  }
+
+  Future<void> _triggerPlaceAction(
+    String roomId,
+    Place place,
+    SwipeDecision decision,
+  ) async {
+    if (_isAnimatingOut || _isMatchOverlayVisible) return;
+    _isAnimatingOut = true;
+
+    final outOffset = switch (decision) {
+      SwipeDecision.liked => const Offset(540, -120),
+      SwipeDecision.disliked => const Offset(-540, -90),
+      SwipeDecision.maybe => const Offset(0, -620),
+    };
+    _dragOffset.value = outOffset;
+
+    await Future<void>.delayed(const Duration(milliseconds: 170));
+    if (!mounted) return;
+    final persistFuture = ref
+        .read(swipeSessionProvider(roomId).notifier)
+        .submitSwipe(decision: decision);
+    _dragOffset.value = Offset.zero;
+    await persistFuture;
+    if (!mounted) return;
+    _isAnimatingOut = false;
+  }
+
+  void _precacheUpcomingPlaces(
+    BuildContext context,
+    List<Place> places,
+    int fromIndex,
+  ) {
+    for (var i = fromIndex; i <= fromIndex + 2 && i < places.length; i += 1) {
+      final url = places[i].photoUrl;
+      if (url != null) {
+        precacheImage(NetworkImage(url), context);
+      }
+    }
   }
 
   void _enqueueMatchOverlay(MatchOverlayData data) {
@@ -525,10 +775,15 @@ class _Header extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({this.message, required this.onRetry});
+  const _EmptyState({
+    this.message,
+    required this.onRetry,
+    this.emptyLabel = 'No movies found for selected filters.',
+  });
 
   final String? message;
   final VoidCallback onRetry;
+  final String emptyLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -536,7 +791,7 @@ class _EmptyState extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          message ?? 'No movies found for selected filters.',
+          message ?? emptyLabel,
           style: AppTypography.bodyRegular.copyWith(
             color: AppColors.secondaryText,
           ),
@@ -609,6 +864,82 @@ class _CardLayer extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     SwipeMovieCard(movie: movie, likedUserIds: likedUserIds),
+                    if (layerIndex == 0 && showDragFeedback)
+                      SwipeDragFeedbackOverlay(
+                        likeProgress: likeFeedbackProgress,
+                        dislikeProgress: dislikeFeedbackProgress,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlaceCardLayer extends StatelessWidget {
+  const _PlaceCardLayer({
+    required this.place,
+    required this.layerIndex,
+    required this.dragProgress,
+    required this.dragOffset,
+    required this.showDragFeedback,
+    required this.likeFeedbackProgress,
+    required this.dislikeFeedbackProgress,
+    required this.likedUserIds,
+    this.onPanUpdate,
+    this.onPanEnd,
+  });
+
+  final Place place;
+  final int layerIndex;
+  final double dragProgress;
+  final Offset dragOffset;
+  final bool showDragFeedback;
+  final double likeFeedbackProgress;
+  final double dislikeFeedbackProgress;
+  final List<String> likedUserIds;
+  final ValueChanged<DragUpdateDetails>? onPanUpdate;
+  final VoidCallback? onPanEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final easedProgress = Curves.easeOutCubic.transform(dragProgress.clamp(0.0, 1.0));
+    final scale = switch (layerIndex) {
+      0 => 1.0,
+      1 => lerpDouble(0.96, 1.0, easedProgress) ?? 1.0,
+      _ => lerpDouble(0.92, 0.96, easedProgress) ?? 0.96,
+    };
+    final translateY = switch (layerIndex) {
+      0 => 0.0,
+      1 => lerpDouble(12.0, 0.0, easedProgress) ?? 0.0,
+      _ => lerpDouble(24.0, 12.0, easedProgress) ?? 12.0,
+    };
+    const opacity = 1.0;
+    final rotate = layerIndex == 0 ? (dragOffset.dx / 420) : 0.0;
+
+    return Transform.translate(
+      offset: Offset(
+        layerIndex == 0 ? dragOffset.dx : 0.0,
+        translateY + (layerIndex == 0 ? dragOffset.dy : 0),
+      ),
+      child: Transform.rotate(
+        angle: rotate,
+        child: Transform.scale(
+          scale: scale,
+          child: Opacity(
+            opacity: opacity,
+            child: GestureDetector(
+              onPanUpdate: onPanUpdate,
+              onPanEnd: (_) => onPanEnd?.call(),
+              child: RepaintBoundary(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    SwipePlaceCard(place: place, likedUserIds: likedUserIds),
                     if (layerIndex == 0 && showDragFeedback)
                       SwipeDragFeedbackOverlay(
                         likeProgress: likeFeedbackProgress,

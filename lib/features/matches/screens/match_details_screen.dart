@@ -12,8 +12,9 @@ import '../../../routes/app_routes.dart';
 import '../../swipe/widgets/swipe_avatar_stack.dart';
 import '../models/match_feed_item.dart';
 import '../providers/matches_provider.dart';
-import '../theme/app_matches_tokens.dart';
 import '../widgets/match_feed_card.dart';
+import '../theme/app_matches_tokens.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MatchDetailsScreen extends ConsumerStatefulWidget {
   const MatchDetailsScreen({
@@ -24,7 +25,7 @@ class MatchDetailsScreen extends ConsumerStatefulWidget {
   });
 
   final String roomId;
-  final int itemId;
+  final String itemId;
   final MatchFeedItem? initialItem;
 
   @override
@@ -119,8 +120,12 @@ class _MatchDetailsBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isMovies = item.roomCategoryId == 'movies';
-    final movieAsync = isMovies
-        ? ref.watch(movieDetailsProvider(item.itemId))
+    final isRestaurants = item.roomCategoryId == 'restaurants';
+    final movieAsync = isMovies && item.movieId != null
+        ? ref.watch(movieDetailsProvider(item.movieId!))
+        : const AsyncValue<dynamic>.data(null);
+    final placeAsync = isRestaurants
+        ? ref.watch(placeDetailsProvider(item.itemId))
         : const AsyncValue<dynamic>.data(null);
 
     return CustomScrollView(
@@ -203,6 +208,49 @@ class _MatchDetailsBody extends ConsumerWidget {
                   ),
                 ),
               ),
+              if (isRestaurants) ...[
+                const SizedBox(height: 16),
+                placeAsync.when(
+                  data: (details) {
+                    if (details == null) {
+                      return const SizedBox.shrink();
+                    }
+                    final lines = <String>[
+                      if (details.shortAddress.isNotEmpty) details.shortAddress,
+                      if (details.overview.isNotEmpty) details.overview,
+                      ...details.openingHours,
+                    ];
+                    if (lines.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final line in lines)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Text(
+                              line,
+                              style: AppMatchesTokens.poppinsRegular(
+                                fontSize: 15,
+                                color: AppColors.secondaryText,
+                              ),
+                            ),
+                          ),
+                        Text(
+                          'Powered by Google',
+                          style: AppMatchesTokens.poppinsRegular(
+                            fontSize: 12,
+                            color: AppColors.secondaryText.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+              ],
               const SizedBox(height: 28),
               Text(
                 'Matched members',
@@ -254,7 +302,9 @@ class _DetailsHero extends StatelessWidget {
               ? ColoredBox(
                   color: AppColors.cardBackground,
                   child: Icon(
-                    Icons.movie_filter_rounded,
+                    item.roomCategoryId == 'restaurants'
+                        ? Icons.restaurant_rounded
+                        : Icons.movie_filter_rounded,
                     size: 64,
                     color: AppColors.neonPink.withValues(alpha: 0.8),
                   ),
@@ -310,7 +360,10 @@ class _DetailsActions extends StatelessWidget {
               ? 'Open Maps'
               : 'View Details',
           icon: Icons.open_in_new_rounded,
-          onPressed: () {},
+          onPressed: () => _openExternalLink(
+            item.googleMapsUri ??
+                'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(item.itemName)}&query_place_id=${Uri.encodeComponent(item.itemId)}',
+          ),
         ),
         const SizedBox(height: 12),
         AppButton.secondary(
@@ -320,5 +373,13 @@ class _DetailsActions extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _openExternalLink(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      return;
+    }
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }

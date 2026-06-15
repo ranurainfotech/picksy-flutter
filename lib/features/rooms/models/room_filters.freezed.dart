@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$RoomFilters {
 
- List<int> get genreIds; List<int> get providerIds; double get minRating; int get releaseYear; String get sortBy;
+ List<int> get genreIds; List<int> get providerIds; double get minRating; int get releaseYear; String get sortBy; String get locationLabel; double get lat; double get lng; int get radiusMeters; List<int> get priceLevels; List<String> get cuisineTypes; bool get openNow;
 /// Create a copy of RoomFilters
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $RoomFiltersCopyWith<RoomFilters> get copyWith => _$RoomFiltersCopyWithImpl<Room
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RoomFilters&&const DeepCollectionEquality().equals(other.genreIds, genreIds)&&const DeepCollectionEquality().equals(other.providerIds, providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear)&&(identical(other.sortBy, sortBy) || other.sortBy == sortBy));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RoomFilters&&const DeepCollectionEquality().equals(other.genreIds, genreIds)&&const DeepCollectionEquality().equals(other.providerIds, providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear)&&(identical(other.sortBy, sortBy) || other.sortBy == sortBy)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.radiusMeters, radiusMeters) || other.radiusMeters == radiusMeters)&&const DeepCollectionEquality().equals(other.priceLevels, priceLevels)&&const DeepCollectionEquality().equals(other.cuisineTypes, cuisineTypes)&&(identical(other.openNow, openNow) || other.openNow == openNow));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(genreIds),const DeepCollectionEquality().hash(providerIds),minRating,releaseYear,sortBy);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(genreIds),const DeepCollectionEquality().hash(providerIds),minRating,releaseYear,sortBy,locationLabel,lat,lng,radiusMeters,const DeepCollectionEquality().hash(priceLevels),const DeepCollectionEquality().hash(cuisineTypes),openNow);
 
 @override
 String toString() {
-  return 'RoomFilters(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear, sortBy: $sortBy)';
+  return 'RoomFilters(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear, sortBy: $sortBy, locationLabel: $locationLabel, lat: $lat, lng: $lng, radiusMeters: $radiusMeters, priceLevels: $priceLevels, cuisineTypes: $cuisineTypes, openNow: $openNow)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $RoomFiltersCopyWith<$Res>  {
   factory $RoomFiltersCopyWith(RoomFilters value, $Res Function(RoomFilters) _then) = _$RoomFiltersCopyWithImpl;
 @useResult
 $Res call({
- List<int> genreIds, List<int> providerIds, double minRating, int releaseYear, String sortBy
+ List<int> genreIds, List<int> providerIds, double minRating, int releaseYear, String sortBy, String locationLabel, double lat, double lng, int radiusMeters, List<int> priceLevels, List<String> cuisineTypes, bool openNow
 });
 
 
@@ -65,14 +65,21 @@ class _$RoomFiltersCopyWithImpl<$Res>
 
 /// Create a copy of RoomFilters
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? releaseYear = null,Object? sortBy = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? releaseYear = null,Object? sortBy = null,Object? locationLabel = null,Object? lat = null,Object? lng = null,Object? radiusMeters = null,Object? priceLevels = null,Object? cuisineTypes = null,Object? openNow = null,}) {
   return _then(_self.copyWith(
 genreIds: null == genreIds ? _self.genreIds : genreIds // ignore: cast_nullable_to_non_nullable
 as List<int>,providerIds: null == providerIds ? _self.providerIds : providerIds // ignore: cast_nullable_to_non_nullable
 as List<int>,minRating: null == minRating ? _self.minRating : minRating // ignore: cast_nullable_to_non_nullable
 as double,releaseYear: null == releaseYear ? _self.releaseYear : releaseYear // ignore: cast_nullable_to_non_nullable
 as int,sortBy: null == sortBy ? _self.sortBy : sortBy // ignore: cast_nullable_to_non_nullable
-as String,
+as String,locationLabel: null == locationLabel ? _self.locationLabel : locationLabel // ignore: cast_nullable_to_non_nullable
+as String,lat: null == lat ? _self.lat : lat // ignore: cast_nullable_to_non_nullable
+as double,lng: null == lng ? _self.lng : lng // ignore: cast_nullable_to_non_nullable
+as double,radiusMeters: null == radiusMeters ? _self.radiusMeters : radiusMeters // ignore: cast_nullable_to_non_nullable
+as int,priceLevels: null == priceLevels ? _self.priceLevels : priceLevels // ignore: cast_nullable_to_non_nullable
+as List<int>,cuisineTypes: null == cuisineTypes ? _self.cuisineTypes : cuisineTypes // ignore: cast_nullable_to_non_nullable
+as List<String>,openNow: null == openNow ? _self.openNow : openNow // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -157,10 +164,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear,  String sortBy)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear,  String sortBy,  String locationLabel,  double lat,  double lng,  int radiusMeters,  List<int> priceLevels,  List<String> cuisineTypes,  bool openNow)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RoomFilters() when $default != null:
-return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear,_that.sortBy);case _:
+return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear,_that.sortBy,_that.locationLabel,_that.lat,_that.lng,_that.radiusMeters,_that.priceLevels,_that.cuisineTypes,_that.openNow);case _:
   return orElse();
 
 }
@@ -178,10 +185,10 @@ return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYe
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear,  String sortBy)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear,  String sortBy,  String locationLabel,  double lat,  double lng,  int radiusMeters,  List<int> priceLevels,  List<String> cuisineTypes,  bool openNow)  $default,) {final _that = this;
 switch (_that) {
 case _RoomFilters():
-return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear,_that.sortBy);case _:
+return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear,_that.sortBy,_that.locationLabel,_that.lat,_that.lng,_that.radiusMeters,_that.priceLevels,_that.cuisineTypes,_that.openNow);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +205,10 @@ return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYe
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear,  String sortBy)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<int> genreIds,  List<int> providerIds,  double minRating,  int releaseYear,  String sortBy,  String locationLabel,  double lat,  double lng,  int radiusMeters,  List<int> priceLevels,  List<String> cuisineTypes,  bool openNow)?  $default,) {final _that = this;
 switch (_that) {
 case _RoomFilters() when $default != null:
-return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear,_that.sortBy);case _:
+return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYear,_that.sortBy,_that.locationLabel,_that.lat,_that.lng,_that.radiusMeters,_that.priceLevels,_that.cuisineTypes,_that.openNow);case _:
   return null;
 
 }
@@ -213,7 +220,7 @@ return $default(_that.genreIds,_that.providerIds,_that.minRating,_that.releaseYe
 @JsonSerializable()
 
 class _RoomFilters implements RoomFilters {
-  const _RoomFilters({final  List<int> genreIds = const <int>[], final  List<int> providerIds = const <int>[], this.minRating = 0, this.releaseYear = 0, this.sortBy = 'popularity.desc'}): _genreIds = genreIds,_providerIds = providerIds;
+  const _RoomFilters({final  List<int> genreIds = const <int>[], final  List<int> providerIds = const <int>[], this.minRating = 0, this.releaseYear = 0, this.sortBy = 'popularity.desc', this.locationLabel = '', this.lat = 0, this.lng = 0, this.radiusMeters = 5000, final  List<int> priceLevels = const <int>[], final  List<String> cuisineTypes = const <String>[], this.openNow = false}): _genreIds = genreIds,_providerIds = providerIds,_priceLevels = priceLevels,_cuisineTypes = cuisineTypes;
   factory _RoomFilters.fromJson(Map<String, dynamic> json) => _$RoomFiltersFromJson(json);
 
  final  List<int> _genreIds;
@@ -233,6 +240,25 @@ class _RoomFilters implements RoomFilters {
 @override@JsonKey() final  double minRating;
 @override@JsonKey() final  int releaseYear;
 @override@JsonKey() final  String sortBy;
+@override@JsonKey() final  String locationLabel;
+@override@JsonKey() final  double lat;
+@override@JsonKey() final  double lng;
+@override@JsonKey() final  int radiusMeters;
+ final  List<int> _priceLevels;
+@override@JsonKey() List<int> get priceLevels {
+  if (_priceLevels is EqualUnmodifiableListView) return _priceLevels;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_priceLevels);
+}
+
+ final  List<String> _cuisineTypes;
+@override@JsonKey() List<String> get cuisineTypes {
+  if (_cuisineTypes is EqualUnmodifiableListView) return _cuisineTypes;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_cuisineTypes);
+}
+
+@override@JsonKey() final  bool openNow;
 
 /// Create a copy of RoomFilters
 /// with the given fields replaced by the non-null parameter values.
@@ -247,16 +273,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RoomFilters&&const DeepCollectionEquality().equals(other._genreIds, _genreIds)&&const DeepCollectionEquality().equals(other._providerIds, _providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear)&&(identical(other.sortBy, sortBy) || other.sortBy == sortBy));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RoomFilters&&const DeepCollectionEquality().equals(other._genreIds, _genreIds)&&const DeepCollectionEquality().equals(other._providerIds, _providerIds)&&(identical(other.minRating, minRating) || other.minRating == minRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear)&&(identical(other.sortBy, sortBy) || other.sortBy == sortBy)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.radiusMeters, radiusMeters) || other.radiusMeters == radiusMeters)&&const DeepCollectionEquality().equals(other._priceLevels, _priceLevels)&&const DeepCollectionEquality().equals(other._cuisineTypes, _cuisineTypes)&&(identical(other.openNow, openNow) || other.openNow == openNow));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_genreIds),const DeepCollectionEquality().hash(_providerIds),minRating,releaseYear,sortBy);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_genreIds),const DeepCollectionEquality().hash(_providerIds),minRating,releaseYear,sortBy,locationLabel,lat,lng,radiusMeters,const DeepCollectionEquality().hash(_priceLevels),const DeepCollectionEquality().hash(_cuisineTypes),openNow);
 
 @override
 String toString() {
-  return 'RoomFilters(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear, sortBy: $sortBy)';
+  return 'RoomFilters(genreIds: $genreIds, providerIds: $providerIds, minRating: $minRating, releaseYear: $releaseYear, sortBy: $sortBy, locationLabel: $locationLabel, lat: $lat, lng: $lng, radiusMeters: $radiusMeters, priceLevels: $priceLevels, cuisineTypes: $cuisineTypes, openNow: $openNow)';
 }
 
 
@@ -267,7 +293,7 @@ abstract mixin class _$RoomFiltersCopyWith<$Res> implements $RoomFiltersCopyWith
   factory _$RoomFiltersCopyWith(_RoomFilters value, $Res Function(_RoomFilters) _then) = __$RoomFiltersCopyWithImpl;
 @override @useResult
 $Res call({
- List<int> genreIds, List<int> providerIds, double minRating, int releaseYear, String sortBy
+ List<int> genreIds, List<int> providerIds, double minRating, int releaseYear, String sortBy, String locationLabel, double lat, double lng, int radiusMeters, List<int> priceLevels, List<String> cuisineTypes, bool openNow
 });
 
 
@@ -284,14 +310,21 @@ class __$RoomFiltersCopyWithImpl<$Res>
 
 /// Create a copy of RoomFilters
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? releaseYear = null,Object? sortBy = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? genreIds = null,Object? providerIds = null,Object? minRating = null,Object? releaseYear = null,Object? sortBy = null,Object? locationLabel = null,Object? lat = null,Object? lng = null,Object? radiusMeters = null,Object? priceLevels = null,Object? cuisineTypes = null,Object? openNow = null,}) {
   return _then(_RoomFilters(
 genreIds: null == genreIds ? _self._genreIds : genreIds // ignore: cast_nullable_to_non_nullable
 as List<int>,providerIds: null == providerIds ? _self._providerIds : providerIds // ignore: cast_nullable_to_non_nullable
 as List<int>,minRating: null == minRating ? _self.minRating : minRating // ignore: cast_nullable_to_non_nullable
 as double,releaseYear: null == releaseYear ? _self.releaseYear : releaseYear // ignore: cast_nullable_to_non_nullable
 as int,sortBy: null == sortBy ? _self.sortBy : sortBy // ignore: cast_nullable_to_non_nullable
-as String,
+as String,locationLabel: null == locationLabel ? _self.locationLabel : locationLabel // ignore: cast_nullable_to_non_nullable
+as String,lat: null == lat ? _self.lat : lat // ignore: cast_nullable_to_non_nullable
+as double,lng: null == lng ? _self.lng : lng // ignore: cast_nullable_to_non_nullable
+as double,radiusMeters: null == radiusMeters ? _self.radiusMeters : radiusMeters // ignore: cast_nullable_to_non_nullable
+as int,priceLevels: null == priceLevels ? _self._priceLevels : priceLevels // ignore: cast_nullable_to_non_nullable
+as List<int>,cuisineTypes: null == cuisineTypes ? _self._cuisineTypes : cuisineTypes // ignore: cast_nullable_to_non_nullable
+as List<String>,openNow: null == openNow ? _self.openNow : openNow // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

@@ -102,6 +102,15 @@ class RoomRepository {
     }, SetOptions(merge: true));
   }
 
+  Future<void> upsertPlaceQueue({
+    required String roomId,
+    required List<String> placeQueue,
+  }) {
+    return _rooms.doc(roomId.trim().toUpperCase()).set({
+      'placeQueue': placeQueue,
+    }, SetOptions(merge: true));
+  }
+
   Future<void> leaveRoom({required String roomId, required String uid}) async {
     final roomRef = _rooms.doc(roomId.trim().toUpperCase());
     final snapshot = await roomRef.get();

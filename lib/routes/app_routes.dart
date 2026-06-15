@@ -20,6 +20,6 @@ abstract final class AppRoutes {
 
   static const matchDetailsPattern = '/matches/:roomId/:itemId';
 
-  static String matchDetails(String roomId, int itemId) =>
-      '/matches/$roomId/$itemId';
+  static String matchDetails(String roomId, String itemId) =>
+      '/matches/$roomId/${Uri.encodeComponent(itemId)}';
 }

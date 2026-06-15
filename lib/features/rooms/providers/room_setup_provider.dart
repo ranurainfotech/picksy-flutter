@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/analytics_provider.dart';
 import '../../../core/services/analytics/analytics_helpers.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../../places/presentation/providers/places_providers.dart';
 import '../models/room.dart';
 import '../models/room_filters.dart';
 import 'create_join_room_provider.dart';
@@ -57,19 +58,40 @@ class RoomSetupState {
     required this.minimumRating,
     required this.releaseYear,
     required this.selectedSortBy,
+    required this.locationLabel,
+    required this.lat,
+    required this.lng,
+    required this.radiusKm,
+    required this.selectedPriceLevels,
+    required this.selectedCuisineTypes,
+    required this.openNow,
     this.errorMessage,
+    this.isGeocoding = false,
   });
 
   factory RoomSetupState.initial(RoomDecisionCategory category) {
+    final defaultName = switch (category) {
+      RoomDecisionCategory.restaurants => 'Dinner Plans 🍔',
+      RoomDecisionCategory.activities => 'Outing Plans 🎉',
+      _ => 'Saturday Night 🍿',
+    };
+
     return RoomSetupState(
       category: category,
-      roomName: 'Saturday Night 🍿',
+      roomName: defaultName,
       selectedMood: roomMoodOptions.first.label,
       selectedGenreIds: const <int>{},
       selectedProviderIds: const <int>{},
-      minimumRating: 7,
+      minimumRating: category == RoomDecisionCategory.restaurants ? 3.5 : 7,
       releaseYear: 0,
       selectedSortBy: roomMoodOptions.first.tmdbSortBy,
+      locationLabel: '',
+      lat: 0,
+      lng: 0,
+      radiusKm: 5,
+      selectedPriceLevels: const <int>{},
+      selectedCuisineTypes: const <String>{'restaurant'},
+      openNow: false,
     );
   }
 
@@ -81,7 +103,17 @@ class RoomSetupState {
   final double minimumRating;
   final int releaseYear;
   final String selectedSortBy;
+  final String locationLabel;
+  final double lat;
+  final double lng;
+  final int radiusKm;
+  final Set<int> selectedPriceLevels;
+  final Set<String> selectedCuisineTypes;
+  final bool openNow;
   final String? errorMessage;
+  final bool isGeocoding;
+
+  bool get isRestaurant => category == RoomDecisionCategory.restaurants;
 
   RoomMoodOption get selectedMoodOption {
     return roomMoodOptions.firstWhere(
@@ -99,8 +131,16 @@ class RoomSetupState {
     double? minimumRating,
     int? releaseYear,
     String? selectedSortBy,
+    String? locationLabel,
+    double? lat,
+    double? lng,
+    int? radiusKm,
+    Set<int>? selectedPriceLevels,
+    Set<String>? selectedCuisineTypes,
+    bool? openNow,
     String? errorMessage,
     bool clearError = false,
+    bool? isGeocoding,
   }) {
     return RoomSetupState(
       category: category ?? this.category,
@@ -111,7 +151,40 @@ class RoomSetupState {
       minimumRating: minimumRating ?? this.minimumRating,
       releaseYear: releaseYear ?? this.releaseYear,
       selectedSortBy: selectedSortBy ?? this.selectedSortBy,
+      locationLabel: locationLabel ?? this.locationLabel,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      radiusKm: radiusKm ?? this.radiusKm,
+      selectedPriceLevels: selectedPriceLevels ?? this.selectedPriceLevels,
+      selectedCuisineTypes: selectedCuisineTypes ?? this.selectedCuisineTypes,
+      openNow: openNow ?? this.openNow,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      isGeocoding: isGeocoding ?? this.isGeocoding,
+    );
+  }
+
+  RoomFilters toRoomFilters() {
+    if (isRestaurant) {
+      return RoomFilters(
+        minRating: minimumRating,
+        locationLabel: locationLabel.trim(),
+        lat: lat,
+        lng: lng,
+        radiusMeters: radiusKm * 1000,
+        priceLevels: selectedPriceLevels.toList()..sort(),
+        cuisineTypes: selectedCuisineTypes.isEmpty
+            ? const <String>['restaurant']
+            : selectedCuisineTypes.toList()..sort(),
+        openNow: openNow,
+      );
+    }
+
+    return RoomFilters(
+      genreIds: selectedGenreIds.toList()..sort(),
+      providerIds: selectedProviderIds.toList()..sort(),
+      minRating: minimumRating,
+      releaseYear: releaseYear,
+      sortBy: selectedSortBy,
     );
   }
 }
@@ -142,6 +215,13 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
     required double minimumRating,
     required int releaseYear,
     required String sortBy,
+    String locationLabel = '',
+    double lat = 0,
+    double lng = 0,
+    int radiusKm = 5,
+    Set<int> priceLevels = const <int>{},
+    Set<String> cuisineTypes = const <String>{'restaurant'},
+    bool openNow = false,
   }) {
     final matchedMood = roomMoodOptions.firstWhere(
       (option) => mood.toLowerCase().contains(option.label.toLowerCase()),
@@ -165,6 +245,15 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
       minimumRating: minimumRating.clamp(0, 10),
       releaseYear: releaseYear,
       selectedSortBy: matchedSortBy.tmdbSortBy,
+      locationLabel: locationLabel,
+      lat: lat,
+      lng: lng,
+      radiusKm: radiusKm,
+      selectedPriceLevels: priceLevels,
+      selectedCuisineTypes: cuisineTypes.isEmpty
+          ? const <String>{'restaurant'}
+          : cuisineTypes,
+      openNow: openNow,
     );
   }
 
@@ -215,6 +304,80 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
     state = state.copyWith(releaseYear: year, clearError: true);
   }
 
+  void updateLocationLabel(String label) {
+    state = state.copyWith(
+      locationLabel: label,
+      lat: 0,
+      lng: 0,
+      clearError: true,
+    );
+  }
+
+  void updateRadiusKm(int radiusKm) {
+    state = state.copyWith(radiusKm: radiusKm.clamp(1, 15), clearError: true);
+  }
+
+  void togglePriceLevel(int level) {
+    final levels = Set<int>.from(state.selectedPriceLevels);
+    if (!levels.add(level)) {
+      levels.remove(level);
+    }
+    state = state.copyWith(selectedPriceLevels: levels, clearError: true);
+  }
+
+  void toggleCuisineType(String placesType) {
+    final cuisines = Set<String>.from(state.selectedCuisineTypes);
+    if (placesType == 'restaurant') {
+      state = state.copyWith(
+        selectedCuisineTypes: const <String>{'restaurant'},
+        clearError: true,
+      );
+      return;
+    }
+
+    cuisines.remove('restaurant');
+    if (!cuisines.add(placesType)) {
+      cuisines.remove(placesType);
+    }
+    if (cuisines.isEmpty) {
+      cuisines.add('restaurant');
+    }
+    state = state.copyWith(selectedCuisineTypes: cuisines, clearError: true);
+  }
+
+  void updateOpenNow(bool value) {
+    state = state.copyWith(openNow: value, clearError: true);
+  }
+
+  Future<bool> geocodeLocation() async {
+    final query = state.locationLabel.trim();
+    if (query.isEmpty) {
+      state = state.copyWith(
+        errorMessage: 'Enter an area or city to continue.',
+      );
+      return false;
+    }
+
+    state = state.copyWith(isGeocoding: true, clearError: true);
+    try {
+      final result =
+          await ref.read(placesRepositoryProvider).geocodeLocation(query);
+      state = state.copyWith(
+        locationLabel: result.label,
+        lat: result.lat,
+        lng: result.lng,
+        isGeocoding: false,
+      );
+      return true;
+    } catch (_) {
+      state = state.copyWith(
+        isGeocoding: false,
+        errorMessage: 'Could not find that area. Try a nearby landmark or city.',
+      );
+      return false;
+    }
+  }
+
   void resetFilters() {
     state = RoomSetupState.initial(state.category);
   }
@@ -232,6 +395,16 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
         errorMessage: 'Room name must be 30 characters or less.',
       );
       return false;
+    }
+
+    if (state.isRestaurant) {
+      if (state.locationLabel.trim().isEmpty || state.lat == 0 || state.lng == 0) {
+        state = state.copyWith(
+          errorMessage: 'Pick an area and tap Find location to continue.',
+        );
+        return false;
+      }
+      return true;
     }
 
     if (state.selectedMood.trim().isEmpty || state.selectedSortBy.trim().isEmpty) {
@@ -266,33 +439,34 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
       final formState = ref.read(roomSetupProvider);
       final mood = roomMoodOptions.firstWhere(
         (option) => option.label == formState.selectedMood,
+        orElse: () => roomMoodOptions.first,
       );
 
       final room = Room(
         id: '',
         name: formState.roomName.trim(),
         category: formState.category.id,
-        mood: mood.displayLabel,
+        mood: formState.isRestaurant ? 'Hungry ${formState.roomName.trim()}' : mood.displayLabel,
         createdBy: uid,
         status: 'waiting',
         members: [uid],
         memberCount: 1,
-        filters: RoomFilters(
-          genreIds: formState.selectedGenreIds.toList()..sort(),
-          providerIds: formState.selectedProviderIds.toList()..sort(),
-          minRating: formState.minimumRating,
-          releaseYear: formState.releaseYear,
-          sortBy: formState.selectedSortBy,
-        ),
+        filters: formState.toRoomFilters(),
       );
 
       final roomId = await ref.read(roomRepositoryProvider).createRoom(room: room);
 
       unawaited(
         ref.read(analyticsServiceProvider).logRoomCreated(
-              genreCount: formState.selectedGenreIds.length,
-              providerCount: formState.selectedProviderIds.length,
-              sortType: sortTypeFromTmdb(formState.selectedSortBy),
+              genreCount: formState.isRestaurant
+                  ? formState.selectedCuisineTypes.length
+                  : formState.selectedGenreIds.length,
+              providerCount: formState.isRestaurant
+                  ? formState.selectedPriceLevels.length
+                  : formState.selectedProviderIds.length,
+              sortType: formState.isRestaurant
+                  ? 'restaurants'
+                  : sortTypeFromTmdb(formState.selectedSortBy),
             ),
       );
 
@@ -317,19 +491,17 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
       final formState = ref.read(roomSetupProvider);
       final mood = roomMoodOptions.firstWhere(
         (option) => option.label == formState.selectedMood,
+        orElse: () => roomMoodOptions.first,
       );
+      final filters = formState.toRoomFilters().toJson();
 
       await ref.read(roomRepositoryProvider).updateRoomSetup(
             roomId: roomId,
             name: formState.roomName.trim(),
-            mood: mood.displayLabel,
-            filters: {
-              'genreIds': formState.selectedGenreIds.toList()..sort(),
-              'providerIds': formState.selectedProviderIds.toList()..sort(),
-              'minRating': formState.minimumRating,
-              'releaseYear': formState.releaseYear,
-              'sortBy': formState.selectedSortBy,
-            },
+            mood: formState.isRestaurant
+                ? 'Hungry ${formState.roomName.trim()}'
+                : mood.displayLabel,
+            filters: filters,
           );
 
       state = const AsyncData(null);

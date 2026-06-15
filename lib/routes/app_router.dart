@@ -108,7 +108,9 @@ GoRouter createAppRouter(WidgetRef ref) {
         path: AppRoutes.matchDetailsPattern,
         builder: (context, state) {
           final roomId = state.pathParameters['roomId']!;
-          final itemId = int.tryParse(state.pathParameters['itemId'] ?? '') ?? 0;
+          final itemId = Uri.decodeComponent(
+            state.pathParameters['itemId'] ?? '',
+          );
           final initialItem = state.extra is MatchFeedItem
               ? state.extra as MatchFeedItem
               : null;

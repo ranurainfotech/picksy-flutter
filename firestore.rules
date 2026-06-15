@@ -2,6 +2,45 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isRoomMember(roomId) {
+      return request.auth != null
+        && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members;
+    }
+
+    function isMovieSwipe(data) {
+      return data.itemType == 'movie'
+        && data.itemId is string
+        && data.movieId is int;
+    }
+
+    function isPlaceSwipe(data) {
+      return data.itemType == 'place'
+        && data.itemId is string;
+    }
+
+    function isLegacyMovieSwipe(data) {
+      return data.movieId is int
+        && !('itemType' in data);
+    }
+
+    function isValidSwipe(data) {
+      return data.userId is string
+        && data.action in ['liked', 'disliked', 'maybe']
+        && (isMovieSwipe(data) || isPlaceSwipe(data) || isLegacyMovieSwipe(data));
+    }
+
+    function isMovieMatch(data) {
+      return (data.itemType == 'movie' || !('itemType' in data))
+        && data.movieId is int
+        && data.title is string;
+    }
+
+    function isPlaceMatch(data) {
+      return data.itemType == 'place'
+        && data.itemId is string
+        && data.title is string;
+    }
+
     match /usernames/{username} {
       allow get: if true;
       allow list: if false;
@@ -73,37 +112,37 @@ service cloud.firestore {
           && request.auth.uid in resource.data.members
           && request.resource.data.movieQueue is list
         )
+        ||
+        (
+          request.resource.data.diff(resource.data).changedKeys()
+            .hasOnly(["placeQueue"])
+          && request.auth.uid in resource.data.members
+          && request.resource.data.placeQueue is list
+        )
       );
       allow delete: if request.auth != null
         && resource.data.createdBy == request.auth.uid;
 
       match /swipes/{swipeId} {
-        allow read: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members;
-        allow create, update: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members
+        allow read: if isRoomMember(roomId);
+        allow create, update: if isRoomMember(roomId)
           && request.resource.data.userId == request.auth.uid
-          && request.resource.data.movieId is int
-          && request.resource.data.action in ["liked", "disliked", "maybe"];
+          && isValidSwipe(request.resource.data);
         allow delete: if false;
       }
 
       match /matches/{matchId} {
-        allow read: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members;
-        allow create, update: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members
-          && request.resource.data.movieId is int
-          && request.resource.data.title is string;
+        allow read: if isRoomMember(roomId);
+        allow create, update: if isRoomMember(roomId)
+          && (isMovieMatch(request.resource.data) || isPlaceMatch(request.resource.data));
         allow delete: if false;
       }
 
       match /progress/{userId} {
-        allow read: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members;
+        allow read: if isRoomMember(roomId);
         allow create, update: if request.auth != null
           && request.auth.uid == userId
-          && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members
+          && isRoomMember(roomId)
           && request.resource.data.currentIndex is int;
         allow delete: if false;
       }

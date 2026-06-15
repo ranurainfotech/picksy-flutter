@@ -6,7 +6,10 @@ import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 
 import { matchJustCrossedThreshold } from "./matchThreshold";
+import { geocodeLocation, getPlaceDetails, searchRestaurants } from "./places";
 import { FUNCTIONS_REGION } from "./region";
+
+export { geocodeLocation, getPlaceDetails, searchRestaurants };
 
 initializeApp();
 
@@ -105,7 +108,9 @@ export const notifyRoomMatch = onDocumentWritten(
     }
 
     const title = (after.title as string | undefined)?.trim() || "a pick";
-    const notificationTitle = "It's a match! 🍿";
+    const category = (roomSnap.data()?.category as string | undefined) ?? "movies";
+    const notificationTitle =
+      category === "restaurants" ? "It's a match! 🍔" : "It's a match! 🍿";
     const notificationBody = `Your group matched on ${title}`;
 
     const tokenEntries: { uid: string; token: string }[] = [];
@@ -131,6 +136,7 @@ export const notifyRoomMatch = onDocumentWritten(
         type: "match",
         roomId,
         movieId,
+        itemId: movieId,
       },
       android: {
         priority: "high",

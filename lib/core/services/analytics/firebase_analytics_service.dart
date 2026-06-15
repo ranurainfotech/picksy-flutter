@@ -164,13 +164,13 @@ class FirebaseAnalyticsService implements AnalyticsService {
   @override
   Future<void> logMatchCardOpened({
     required String roomId,
-    required int itemId,
+    required String itemId,
   }) {
     return _logEvent(
       AnalyticsEvents.matchCardOpened,
       parameters: {
         AnalyticsParams.roomId: _sanitize(roomId),
-        AnalyticsParams.itemId: itemId,
+        AnalyticsParams.itemId: _sanitize(itemId),
       },
     );
   }
@@ -178,13 +178,13 @@ class FirebaseAnalyticsService implements AnalyticsService {
   @override
   Future<void> logMatchShared({
     required String roomId,
-    required int itemId,
+    required String itemId,
   }) {
     return _logEvent(
       AnalyticsEvents.matchShared,
       parameters: {
         AnalyticsParams.roomId: _sanitize(roomId),
-        AnalyticsParams.itemId: itemId,
+        AnalyticsParams.itemId: _sanitize(itemId),
       },
     );
   }
