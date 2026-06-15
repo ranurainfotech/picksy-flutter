@@ -11,6 +11,7 @@ Restaurant search uses **[Google Map Places New V2 on RapidAPI](https://rapidapi
 Callable functions in `asia-south1`:
 
 - `geocodeLocation` — text area → lat/lng
+- `searchLocationSuggestions` — autocomplete for area/city search
 - `searchRestaurants` — nearby restaurant deck
 - `getPlaceDetails` — match detail screen
 

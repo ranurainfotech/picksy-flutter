@@ -28,6 +28,7 @@ type PlaceRecord = {
   shortAddress: string;
   types: string[];
   photoUrl: string | null;
+  photoName: string | null;
   googleMapsUri: string | null;
 };
 
@@ -70,7 +71,22 @@ async function rapidPlacesRequest<T>(
       status: response.status,
       body,
     });
-    throw new HttpsError("internal", "Places request failed.");
+    if (response.status === 429) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "Places API rate limit reached. Try again later.",
+      );
+    }
+    if (response.status === 400) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Places search request was rejected. Check room filters and try again.",
+      );
+    }
+    throw new HttpsError(
+      "internal",
+      `Places request failed (${response.status}).`,
+    );
   }
 
   return (await response.json()) as T;
@@ -156,6 +172,11 @@ function parseRating(value: unknown): number {
   return 0;
 }
 
+function isPlaceOpenNow(place: Record<string, unknown>): boolean {
+  const hours = place.currentOpeningHours as { openNow?: boolean } | undefined;
+  return hours?.openNow === true;
+}
+
 function normalizePlace(place: Record<string, unknown>): Omit<PlaceRecord, "photoUrl"> & {
   photoName: string | null;
 } {
@@ -230,6 +251,72 @@ export const geocodeLocation = onCall(
   },
 );
 
+export const searchLocationSuggestions = onCall(
+  { region: FUNCTIONS_REGION, secrets: [rapidApiKey] },
+  async (request) => {
+    requireAuth(request);
+    const apiKey = rapidApiKey.value();
+    requireRapidApiKey(apiKey);
+
+    const query = (request.data?.query as string | undefined)?.trim();
+    if (!query || query.length < 2) {
+      return { suggestions: [] };
+    }
+
+    const result = await rapidPlacesRequest<{
+      places?: Array<Record<string, unknown>>;
+    }>(
+      "/v1/places:searchText",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          textQuery: query,
+          maxResultCount: 8,
+        }),
+      },
+      "places.displayName,places.location,places.formattedAddress,places.shortFormattedAddress",
+      apiKey,
+    );
+
+    const suggestions = (result.places ?? [])
+      .map((place) => {
+        const location = place.location as
+          | { latitude?: number; longitude?: number }
+          | undefined;
+        if (location?.latitude == null || location?.longitude == null) {
+          return null;
+        }
+
+        const displayName =
+          ((place.displayName as { text?: string } | undefined)?.text as
+            | string
+            | undefined) ?? "";
+        const label =
+          (place.formattedAddress as string | undefined) ??
+          (place.shortFormattedAddress as string | undefined) ??
+          displayName;
+
+        if (!label) {
+          return null;
+        }
+
+        return {
+          label,
+          lat: location.latitude,
+          lng: location.longitude,
+        };
+      })
+      .filter(
+        (
+          suggestion,
+        ): suggestion is { label: string; lat: number; lng: number } =>
+          suggestion != null,
+      );
+
+    return { suggestions };
+  },
+);
+
 export const searchRestaurants = onCall(
   { region: FUNCTIONS_REGION, secrets: [rapidApiKey] },
   async (request) => {
@@ -265,13 +352,6 @@ export const searchRestaurants = onCall(
       },
     };
 
-    if (data.minRating && data.minRating > 0) {
-      body.minRating = data.minRating;
-    }
-    if (data.openNow) {
-      body.openNow = true;
-    }
-
     const fieldMask = [
       "places.id",
       "places.displayName",
@@ -282,6 +362,7 @@ export const searchRestaurants = onCall(
       "places.types",
       "places.photos.name",
       "places.googleMapsUri",
+      "places.currentOpeningHours",
     ].join(",");
 
     const result = await rapidPlacesRequest<{
@@ -298,7 +379,19 @@ export const searchRestaurants = onCall(
     );
 
     const excluded = new Set(data.excludedPlaceIds ?? []);
-    let places = (result.places ?? [])
+    let rawPlaces = result.places ?? [];
+
+    if (data.minRating && data.minRating > 0) {
+      rawPlaces = rawPlaces.filter(
+        (place) => parseRating(place.rating) >= data.minRating!,
+      );
+    }
+
+    if (data.openNow) {
+      rawPlaces = rawPlaces.filter((place) => isPlaceOpenNow(place));
+    }
+
+    let places = rawPlaces
       .map(normalizePlace)
       .filter((place) => place.placeId.length > 0 && !excluded.has(place.placeId));
 
@@ -309,28 +402,39 @@ export const searchRestaurants = onCall(
       );
     }
 
-    const withPhotos: PlaceRecord[] = await Promise.all(
-      places.slice(0, 20).map(async (place) => {
-        const photoUrl = place.photoName
-          ? await resolvePhotoUrl(place.photoName, apiKey)
-          : null;
-        return {
-          placeId: place.placeId,
-          name: place.name,
-          rating: place.rating,
-          priceLevel: place.priceLevel,
-          shortAddress: place.shortAddress,
-          types: place.types,
-          photoUrl,
-          googleMapsUri: place.googleMapsUri,
-        };
-      }),
-    );
+    const deck: PlaceRecord[] = places.slice(0, 20).map((place) => ({
+      placeId: place.placeId,
+      name: place.name,
+      rating: place.rating,
+      priceLevel: place.priceLevel,
+      shortAddress: place.shortAddress,
+      types: place.types,
+      photoUrl: null,
+      photoName: place.photoName,
+      googleMapsUri: place.googleMapsUri,
+    }));
 
     return {
-      places: withPhotos,
+      places: deck,
       nextPageToken: null,
     };
+  },
+);
+
+export const resolvePlacePhoto = onCall(
+  { region: FUNCTIONS_REGION, secrets: [rapidApiKey] },
+  async (request) => {
+    requireAuth(request);
+    const apiKey = rapidApiKey.value();
+    requireRapidApiKey(apiKey);
+
+    const photoName = (request.data?.photoName as string | undefined)?.trim();
+    if (!photoName) {
+      return { photoUrl: null };
+    }
+
+    const photoUrl = await resolvePhotoUrl(photoName, apiKey);
+    return { photoUrl };
   },
 );
 
@@ -381,6 +485,7 @@ export const getPlaceDetails = onCall(
       shortAddress: normalized.shortAddress,
       types: normalized.types,
       photoUrl,
+      photoName: normalized.photoName,
       googleMapsUri: normalized.googleMapsUri,
       overview:
         ((place.editorialSummary as { text?: string } | undefined)?.text as

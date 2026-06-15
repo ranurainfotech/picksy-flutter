@@ -6,10 +6,10 @@ import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 
 import { matchJustCrossedThreshold } from "./matchThreshold";
-import { geocodeLocation, getPlaceDetails, searchRestaurants } from "./places";
+import { geocodeLocation, getPlaceDetails, resolvePlacePhoto, searchLocationSuggestions, searchRestaurants } from "./places";
 import { FUNCTIONS_REGION } from "./region";
 
-export { geocodeLocation, getPlaceDetails, searchRestaurants };
+export { geocodeLocation, getPlaceDetails, resolvePlacePhoto, searchLocationSuggestions, searchRestaurants };
 
 initializeApp();
 
