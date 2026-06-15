@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -10,9 +12,12 @@ import 'core/services/analytics/crash_reporting_service.dart';
 import 'core/services/notifications/firebase_messaging_background.dart';
 import 'core/theme/app_design_system.dart';
 import 'core/widgets/push_notification_listener.dart';
+import 'features/auth/providers/firebase_auth_providers.dart';
+import 'features/auth/repositories/auth_repository.dart';
+import 'features/auth/services/initial_route.dart';
+import 'features/onboarding/repositories/user_repository.dart';
 import 'firebase_options.dart';
 import 'routes/app_router.dart';
-import 'features/auth/providers/session_redirect_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,11 +27,23 @@ Future<void> main() async {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   }
   await FirebaseCrashReportingService.configureGlobalHandlers();
-  runApp(const ProviderScope(child: PicksyApp()));
+
+  final initialLocation = await resolveInitialLocation(
+    authRepository: AuthRepository(FirebaseAuth.instance),
+    userRepository: UserRepository(FirebaseFirestore.instance),
+  );
+
+  runApp(
+    ProviderScope(
+      child: PicksyApp(initialLocation: initialLocation),
+    ),
+  );
 }
 
 class PicksyApp extends ConsumerStatefulWidget {
-  const PicksyApp({super.key});
+  const PicksyApp({super.key, required this.initialLocation});
+
+  final String initialLocation;
 
   @override
   ConsumerState<PicksyApp> createState() => _PicksyAppState();
@@ -38,7 +55,10 @@ class _PicksyAppState extends ConsumerState<PicksyApp> {
   @override
   void initState() {
     super.initState();
-    _router = createAppRouter(ref);
+    _router = createAppRouter(
+      ref,
+      initialLocation: widget.initialLocation,
+    );
   }
 
   @override
@@ -49,8 +69,10 @@ class _PicksyAppState extends ConsumerState<PicksyApp> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(sessionRedirectNotifierProvider, (_, _) {
-      _router.refresh();
+    ref.listen(authStateProvider, (previous, next) {
+      if (previous?.value != next.value) {
+        _router.refresh();
+      }
     });
 
     return PushNotificationListener(

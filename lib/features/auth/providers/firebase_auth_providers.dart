@@ -8,14 +8,14 @@ final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
   return FirebaseAuth.instance;
 });
 
-final googleSignInProvider = Provider<GoogleSignIn>((ref) {
+final googleSignInClientProvider = Provider<GoogleSignIn>((ref) {
   return GoogleSignIn();
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
     ref.watch(firebaseAuthProvider),
-    googleSignIn: ref.watch(googleSignInProvider),
+    googleSignIn: ref.watch(googleSignInClientProvider),
   );
 });
 

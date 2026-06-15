@@ -1,11 +1,11 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/analytics_provider.dart';
 import '../../auth/providers/firebase_auth_providers.dart';
-import '../../auth/providers/session_redirect_provider.dart';
 import '../models/onboarding_profile_state.dart';
 import '../repositories/user_repository.dart';
 import '../services/username_validator.dart';
@@ -84,8 +84,6 @@ class OnboardingSubmitNotifier extends AsyncNotifier<void> {
             isAnonymous: false,
           );
 
-      await ref.read(sessionRedirectNotifierProvider.notifier).refresh();
-
       final analytics = ref.read(analyticsServiceProvider);
       unawaited(analytics.logOnboardingCompleted());
       unawaited(
@@ -99,9 +97,6 @@ class OnboardingSubmitNotifier extends AsyncNotifier<void> {
       return false;
     } on OnboardingFailureException catch (error, stackTrace) {
       state = AsyncError(error.message, stackTrace);
-      return false;
-    } on FirebaseAuthException catch (error, stackTrace) {
-      state = AsyncError(_friendlyAuthError(error), stackTrace);
       return false;
     } on FirebaseException catch (error, stackTrace) {
       state = AsyncError(_friendlyFirestoreError(error), stackTrace);
@@ -118,19 +113,6 @@ class OnboardingSubmitNotifier extends AsyncNotifier<void> {
   void clearError() {
     if (state.hasError) {
       state = const AsyncData(null);
-    }
-  }
-
-  String _friendlyAuthError(FirebaseAuthException error) {
-    switch (error.code) {
-      case 'operation-not-allowed':
-        return 'Google sign-in is not enabled yet.';
-      case 'network-request-failed':
-        return 'Network issue. Check your connection and try again.';
-      case 'too-many-requests':
-        return 'Too many attempts. Give it a moment and try again.';
-      default:
-        return 'Could not create your session. Try again.';
     }
   }
 
