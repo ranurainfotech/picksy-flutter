@@ -22,6 +22,11 @@ class UserRepository {
     return !usernameSnapshot.exists;
   }
 
+  Future<bool> userExists(String uid) async {
+    final userSnapshot = await _users.doc(uid).get();
+    return userSnapshot.exists;
+  }
+
   Future<void> createUser({
     required String uid,
     required String username,

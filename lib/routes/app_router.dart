@@ -2,7 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:picksy_flutter/features/rooms/screens/room_lobby_screen.dart';
 
-import '../features/auth/providers/auth_providers.dart';
+import '../features/auth/providers/session_redirect_provider.dart';
 import '../features/home/screens/home_shell.dart';
 import '../features/matches/screens/match_details_screen.dart';
 import '../features/matches/models/match_feed_item.dart';
@@ -14,25 +14,53 @@ import '../features/swipe/screens/swipe_experience_screen.dart';
 import '../features/welcome/screens/welcome_screen.dart';
 import 'app_routes.dart';
 
+bool _isProtectedRoute(String path) {
+  return path == AppRoutes.home ||
+      path.startsWith('/rooms/') ||
+      path.startsWith('/matches/');
+}
+
 GoRouter createAppRouter(WidgetRef ref) {
   return GoRouter(
     initialLocation: AppRoutes.root,
     redirect: (context, state) {
-      final currentUser = ref.read(authRepositoryProvider).currentUser;
+      final session = ref.read(sessionRedirectNotifierProvider);
       final path = state.uri.path;
 
-      if (path == AppRoutes.root) {
-        return currentUser == null ? AppRoutes.welcome : AppRoutes.home;
+      if (session == SessionRedirectState.resolving) {
+        return null;
       }
 
-      if (currentUser != null &&
-          (path == AppRoutes.welcome || path == AppRoutes.onboarding)) {
+      if (session == SessionRedirectState.unauthenticated) {
+        if (path == AppRoutes.root) {
+          return AppRoutes.welcome;
+        }
+
+        if (_isProtectedRoute(path) || path == AppRoutes.onboarding) {
+          return AppRoutes.welcome;
+        }
+
+        return null;
+      }
+
+      if (session == SessionRedirectState.needsOnboarding) {
+        if (path == AppRoutes.root || path == AppRoutes.welcome) {
+          return AppRoutes.onboarding;
+        }
+
+        if (_isProtectedRoute(path)) {
+          return AppRoutes.onboarding;
+        }
+
+        return null;
+      }
+
+      if (path == AppRoutes.root) {
         return AppRoutes.home;
       }
 
-      if (currentUser == null &&
-          (path == AppRoutes.home || path.startsWith('/rooms/') || path.startsWith('/matches/'))) {
-        return AppRoutes.welcome;
+      if (path == AppRoutes.welcome || path == AppRoutes.onboarding) {
+        return AppRoutes.home;
       }
 
       return null;
@@ -41,8 +69,14 @@ GoRouter createAppRouter(WidgetRef ref) {
       GoRoute(
         path: AppRoutes.root,
         redirect: (context, state) {
-          final currentUser = ref.read(authRepositoryProvider).currentUser;
-          return currentUser == null ? AppRoutes.welcome : AppRoutes.home;
+          final session = ref.read(sessionRedirectNotifierProvider);
+
+          return switch (session) {
+            SessionRedirectState.resolving => null,
+            SessionRedirectState.unauthenticated => AppRoutes.welcome,
+            SessionRedirectState.needsOnboarding => AppRoutes.onboarding,
+            SessionRedirectState.authenticated => AppRoutes.home,
+          };
         },
       ),
       GoRoute(

@@ -4,7 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/analytics_provider.dart';
-import '../../auth/providers/auth_providers.dart';
+import '../../auth/providers/firebase_auth_providers.dart';
+import '../../auth/providers/session_redirect_provider.dart';
 import '../models/onboarding_profile_state.dart';
 import '../repositories/user_repository.dart';
 import '../services/username_validator.dart';
@@ -66,14 +67,11 @@ class OnboardingSubmitNotifier extends AsyncNotifier<void> {
         throw const UsernameTakenException();
       }
 
-      final userCredential = await ref
-          .read(authRepositoryProvider)
-          .signInAnonymously();
-      final firebaseUser = userCredential.user;
+      final firebaseUser = ref.read(authRepositoryProvider).currentUser;
 
       if (firebaseUser == null) {
         throw const OnboardingFailureException(
-          'Could not create your session. Try again.',
+          'Sign in with Google first, then finish setting up your profile.',
         );
       }
 
@@ -83,8 +81,10 @@ class OnboardingSubmitNotifier extends AsyncNotifier<void> {
             uid: firebaseUser.uid,
             username: username,
             avatarId: profile.selectedAvatarId,
-            isAnonymous: firebaseUser.isAnonymous,
+            isAnonymous: false,
           );
+
+      await ref.read(sessionRedirectNotifierProvider.notifier).refresh();
 
       final analytics = ref.read(analyticsServiceProvider);
       unawaited(analytics.logOnboardingCompleted());
@@ -124,7 +124,7 @@ class OnboardingSubmitNotifier extends AsyncNotifier<void> {
   String _friendlyAuthError(FirebaseAuthException error) {
     switch (error.code) {
       case 'operation-not-allowed':
-        return 'Anonymous sign-in is not enabled yet.';
+        return 'Google sign-in is not enabled yet.';
       case 'network-request-failed':
         return 'Network issue. Check your connection and try again.';
       case 'too-many-requests':

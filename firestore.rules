@@ -61,7 +61,7 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.auth.uid == uid
         && request.resource.data.uid == uid
-        && request.resource.data.isAnonymous == true
+        && request.resource.data.isAnonymous is bool
         && request.resource.data.roomsCount == 0
         && request.resource.data.matchesCount == 0;
       allow update: if request.auth != null && request.auth.uid == uid;

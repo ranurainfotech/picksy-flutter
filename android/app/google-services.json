@@ -12,7 +12,20 @@
           "package_name": "com.picksy.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "249822632504-ldfdtrut91uurg1uqblh95mv0rnc90t1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.picksy.app",
+            "certificate_hash": "24197b654dedba454f273a1805249704c56a25f5"
+          }
+        },
+        {
+          "client_id": "249822632504-nf9h78l1irmr2o3skm1lvoqjmtsjhr9s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCWccZNHj-nyYS-tfL3CgNlcOhhPEWB1JU"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "249822632504-nf9h78l1irmr2o3skm1lvoqjmtsjhr9s.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "249822632504-9moc0obafvt9ejdgj929g1604pvlrghp.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.picksy.app"
+              }
+            }
+          ]
         }
       }
     }

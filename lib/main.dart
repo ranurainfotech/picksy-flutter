@@ -12,6 +12,7 @@ import 'core/theme/app_design_system.dart';
 import 'core/widgets/push_notification_listener.dart';
 import 'firebase_options.dart';
 import 'routes/app_router.dart';
+import 'features/auth/providers/session_redirect_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,6 +49,10 @@ class _PicksyAppState extends ConsumerState<PicksyApp> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(sessionRedirectNotifierProvider, (_, _) {
+      _router.refresh();
+    });
+
     return PushNotificationListener(
       child: MaterialApp.router(
         title: 'Picksy',
