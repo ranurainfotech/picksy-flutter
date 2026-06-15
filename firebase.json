@@ -16,12 +16,19 @@
           "fileOutput": "ios/Runner/GoogleService-Info.plist"
         }
       },
+      "web": {
+        "default": {
+          "projectId": "picksy-mobile-app",
+          "appId": "1:249822632504:web:71e4e25a4499222a86e4cd"
+        }
+      },
       "dart": {
         "lib/firebase_options.dart": {
           "projectId": "picksy-mobile-app",
           "configurations": {
             "android": "1:249822632504:android:bb63583ca8a385e586e4cd",
-            "ios": "1:249822632504:ios:7cdd7a8a76e0e26e86e4cd"
+            "ios": "1:249822632504:ios:7cdd7a8a76e0e26e86e4cd",
+            "web": "1:249822632504:web:71e4e25a4499222a86e4cd"
           }
         }
       }

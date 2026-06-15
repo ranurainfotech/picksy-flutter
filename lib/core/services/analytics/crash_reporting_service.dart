@@ -9,12 +9,29 @@ abstract class CrashReportingService {
   });
 }
 
+class NoOpCrashReportingService implements CrashReportingService {
+  const NoOpCrashReportingService();
+
+  static Future<void> configureGlobalHandlers() async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace stackTrace, {
+    bool fatal = false,
+  }) async {}
+}
+
 class FirebaseCrashReportingService implements CrashReportingService {
   FirebaseCrashReportingService(this._crashlytics);
 
   final FirebaseCrashlytics _crashlytics;
 
   static Future<void> configureGlobalHandlers() async {
+    if (kIsWeb) {
+      return NoOpCrashReportingService.configureGlobalHandlers();
+    }
+
     final crashlytics = FirebaseCrashlytics.instance;
     await crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
 
@@ -32,6 +49,10 @@ class FirebaseCrashReportingService implements CrashReportingService {
     StackTrace stackTrace, {
     bool fatal = false,
   }) {
+    if (kIsWeb) {
+      return Future<void>.value();
+    }
+
     return _crashlytics.recordError(error, stackTrace, fatal: fatal);
   }
 }

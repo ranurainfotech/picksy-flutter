@@ -1,5 +1,6 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/analytics/analytics_service.dart';
@@ -11,5 +12,8 @@ final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
 });
 
 final crashReportingServiceProvider = Provider<CrashReportingService>((ref) {
+  if (kIsWeb) {
+    return const NoOpCrashReportingService();
+  }
   return FirebaseCrashReportingService(FirebaseCrashlytics.instance);
 });
