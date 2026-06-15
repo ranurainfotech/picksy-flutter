@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/room.dart';
+import '../../places/domain/entities/place.dart';
 
 class RoomNotFoundException implements Exception {
   const RoomNotFoundException();
@@ -108,6 +109,63 @@ class RoomRepository {
   }) {
     return _rooms.doc(roomId.trim().toUpperCase()).set({
       'placeQueue': placeQueue,
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> mergePlaceCache({
+    required String roomId,
+    required List<Place> places,
+  }) async {
+    if (places.isEmpty) {
+      return;
+    }
+
+    final normalizedRoomId = roomId.trim().toUpperCase();
+    final snapshot = await _rooms.doc(normalizedRoomId).get();
+    final existing = Map<String, dynamic>.from(
+      snapshot.data()?['placeCache'] as Map? ?? const <String, dynamic>{},
+    );
+
+    for (final place in places) {
+      if (place.placeId.isEmpty) {
+        continue;
+      }
+      existing[place.placeId] = place.toCacheJson();
+    }
+
+    await _rooms.doc(normalizedRoomId).set({
+      'placeCache': existing,
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> upsertPlaceDeck({
+    required String roomId,
+    required List<String> placeQueue,
+    required List<Place> places,
+  }) async {
+    final normalizedRoomId = roomId.trim().toUpperCase();
+    final snapshot = await _rooms.doc(normalizedRoomId).get();
+    final existing = Map<String, dynamic>.from(
+      snapshot.data()?['placeCache'] as Map? ?? const <String, dynamic>{},
+    );
+
+    for (final place in places) {
+      if (place.placeId.isEmpty) {
+        continue;
+      }
+      existing[place.placeId] = place.toCacheJson();
+    }
+
+    await _rooms.doc(normalizedRoomId).set({
+      'placeQueue': placeQueue,
+      'placeCache': existing,
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> clearPlaceDeck({required String roomId}) {
+    return _rooms.doc(roomId.trim().toUpperCase()).set({
+      'placeQueue': const <String>[],
+      'placeCache': const <String, dynamic>{},
     }, SetOptions(merge: true));
   }
 

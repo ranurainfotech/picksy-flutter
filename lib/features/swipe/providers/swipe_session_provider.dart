@@ -123,10 +123,7 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
                 .data()?['category'] as String? ??
             'movies';
         if (currentCategory == 'restaurants') {
-          await ref.read(roomRepositoryProvider).upsertPlaceQueue(
-                roomId: roomId,
-                placeQueue: const <String>[],
-              );
+          await ref.read(roomRepositoryProvider).clearPlaceDeck(roomId: roomId);
         } else {
           await ref.read(roomRepositoryProvider).upsertMovieQueue(
                 roomId: roomId,
@@ -290,6 +287,37 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
           );
 
     var queueIds = _parsePlaceQueueIds(roomData['placeQueue']);
+    final placeCache = _parsePlaceCache(roomData['placeCache']);
+
+    final visibleQueueIds = queueIds
+        .where((id) => !swipedIds.contains(id))
+        .toList(growable: false);
+
+    if (_canServeRestaurantDeckFromCache(
+      queueIds: queueIds,
+      placeCache: placeCache,
+      swipedIds: swipedIds,
+    )) {
+      final places = _buildPlaceDeck(
+        discovered: const <Place>[],
+        queueIds: queueIds,
+        swipedIds: swipedIds,
+        placeCache: placeCache,
+      );
+      debugPrint(
+        '[SwipeSession] Serving ${places.length} cached restaurants for $roomId',
+      );
+      return SwipeSessionState(
+        category: 'restaurants',
+        places: places,
+        currentIndex: 0,
+        endReached: false,
+        placeQueueIds: queueIds,
+        visiblePlaceQueueIds: visibleQueueIds,
+        loadedVisibleCount: places.length,
+      );
+    }
+
     debugPrint(
       '[SwipeSession] Loading restaurants for $roomId at '
       '${filters.lat},${filters.lng} radius=${filters.radiusMeters}m',
@@ -311,6 +339,7 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
       discovered: searchResult.places,
       queueIds: queueIds,
       swipedIds: swipedIds,
+      placeCache: placeCache,
     );
 
     if (places.isEmpty) {
@@ -325,20 +354,21 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
       );
     }
 
-    var visibleQueueIds = queueIds
+    if (queueIds.isEmpty || visibleQueueIds.isEmpty) {
+      queueIds = places.map((place) => place.placeId).toList(growable: false);
+    }
+
+    final nextVisibleQueueIds = queueIds
         .where((id) => !swipedIds.contains(id))
         .toList(growable: false);
 
-    if (queueIds.isEmpty || visibleQueueIds.isEmpty) {
-      queueIds = places.map((place) => place.placeId).toList(growable: false);
-      visibleQueueIds = queueIds;
-      unawaited(
-        ref.read(roomRepositoryProvider).upsertPlaceQueue(
-              roomId: roomId,
-              placeQueue: queueIds,
-            ),
-      );
-    }
+    unawaited(
+      ref.read(roomRepositoryProvider).upsertPlaceDeck(
+            roomId: roomId,
+            placeQueue: queueIds,
+            places: places,
+          ),
+    );
 
     return SwipeSessionState(
       category: 'restaurants',
@@ -346,18 +376,67 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
       currentIndex: 0,
       endReached: false,
       placeQueueIds: queueIds,
-      visiblePlaceQueueIds: visibleQueueIds,
+      visiblePlaceQueueIds: nextVisibleQueueIds,
       loadedVisibleCount: places.length,
       nextPageToken: searchResult.nextPageToken,
     );
+  }
+
+  bool _canServeRestaurantDeckFromCache({
+    required List<String> queueIds,
+    required Map<String, Place> placeCache,
+    required Set<String> swipedIds,
+  }) {
+    if (queueIds.isEmpty || placeCache.isEmpty) {
+      return false;
+    }
+
+    final visibleIds =
+        queueIds.where((id) => !swipedIds.contains(id)).toList(growable: false);
+    if (visibleIds.isEmpty) {
+      return false;
+    }
+
+    for (final id in visibleIds) {
+      final cached = placeCache[id];
+      if (cached == null || cached.placeId.isEmpty) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  Map<String, Place> _parsePlaceCache(Object? rawCache) {
+    if (rawCache is! Map) {
+      return const <String, Place>{};
+    }
+
+    final cache = <String, Place>{};
+    for (final entry in rawCache.entries) {
+      final key = '${entry.key}';
+      final value = entry.value;
+      if (key.isEmpty || value is! Map) {
+        continue;
+      }
+      final place = Place.fromCacheJson(Map<String, dynamic>.from(value));
+      if (place.placeId.isNotEmpty) {
+        cache[place.placeId] = place;
+      }
+    }
+    return cache;
   }
 
   List<Place> _buildPlaceDeck({
     required List<Place> discovered,
     required List<String> queueIds,
     required Set<String> swipedIds,
+    Map<String, Place> placeCache = const <String, Place>{},
   }) {
-    final byId = {for (final place in discovered) place.placeId: place};
+    final byId = {
+      ...placeCache,
+      for (final place in discovered) place.placeId: place,
+    };
     final deck = <Place>[];
 
     for (final id in queueIds) {
@@ -890,10 +969,23 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
           .where((place) => !alreadyLoaded.contains(place.placeId))
           .toList(growable: false);
       final mergedPlaces = List<Place>.from(current.places)..addAll(newPlaces);
+      final mergedQueueIds = [
+        ...current.placeQueueIds,
+        ...newPlaces.map((place) => place.placeId),
+      ];
+
+      unawaited(
+        ref.read(roomRepositoryProvider).upsertPlaceDeck(
+              roomId: roomId,
+              placeQueue: mergedQueueIds,
+              places: mergedPlaces,
+            ),
+      );
 
       state = AsyncData(
         current.copyWith(
           places: mergedPlaces,
+          placeQueueIds: mergedQueueIds,
           loadedVisibleCount: mergedPlaces.length,
           isFetchingMore: false,
           nextPageToken: searchResult.nextPageToken,
