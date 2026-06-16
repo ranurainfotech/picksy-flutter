@@ -9,7 +9,8 @@
     "build": "tsc",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions,firestore",
-    "deploy": "firebase deploy --only functions"
+    "deploy": "firebase deploy --only functions",
+    "seed:monetization": "node scripts/seed_monetization_config.cjs"
   },
   "dependencies": {
     "firebase-admin": "^13.6.0",

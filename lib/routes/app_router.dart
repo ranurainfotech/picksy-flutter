@@ -12,6 +12,8 @@ import '../features/rooms/providers/create_join_room_provider.dart';
 import '../features/rooms/screens/create_room_details_screen.dart';
 import '../features/swipe/screens/swipe_experience_screen.dart';
 import '../features/welcome/screens/welcome_screen.dart';
+import '../features/subscription/exceptions/monetization_exceptions.dart';
+import '../features/subscription/screens/paywall_screen.dart';
 import 'app_routes.dart';
 
 GoRouter createAppRouter(
@@ -88,6 +90,15 @@ GoRouter createAppRouter(
         builder: (context, state) {
           final roomId = state.pathParameters['roomId']!;
           return SwipeExperienceScreen(roomId: roomId);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.paywall,
+        builder: (context, state) {
+          final reason = state.extra is PaywallReason
+              ? state.extra! as PaywallReason
+              : PaywallReason.profileUpgrade;
+          return PaywallScreen(reason: reason);
         },
       ),
       GoRoute(

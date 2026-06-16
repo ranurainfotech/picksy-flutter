@@ -23,11 +23,8 @@ class RoomRepository {
     final roomId = room.id.isNotEmpty ? room.id : await _generateUniqueRoomId();
     final roomRef = _rooms.doc(roomId);
     final payload = room.copyWith(id: roomId).toJson()
-      ..remove('createdAt');
-    final filters = payload['filters'];
-    if (filters is! Map<String, dynamic>) {
-      payload['filters'] = room.filters.toJson();
-    }
+      ..remove('createdAt')
+      ..['filters'] = room.filters.toJson();
 
     await roomRef.set({
       ...payload,

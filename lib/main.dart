@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -15,7 +17,12 @@ import 'core/widgets/push_notification_listener.dart';
 import 'features/auth/providers/firebase_auth_providers.dart';
 import 'features/auth/repositories/auth_repository.dart';
 import 'features/auth/services/initial_route.dart';
+import 'features/monetization/providers/monetization_ad_provider.dart';
 import 'features/onboarding/repositories/user_repository.dart';
+import 'features/subscription/providers/subscription_bootstrap_provider.dart';
+import 'features/subscription/providers/subscription_providers.dart';
+import 'features/subscription/providers/subscription_sync.dart';
+import 'features/subscription/widgets/paywall_listener.dart';
 import 'firebase_options.dart';
 import 'routes/app_router.dart';
 
@@ -69,18 +76,39 @@ class _PicksyAppState extends ConsumerState<PicksyApp> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(subscriptionBootstrapProvider);
+    ref.watch(monetizationBootstrapProvider);
+    ref.watch(subscriptionCustomerInfoListenerProvider);
+    ref.watch(monetizationConfigProvider);
+    ref.watch(userEntitlementsProvider);
+
+    ref.listen(monetizationConfigProvider, (previous, next) {
+      if (!kDebugMode) {
+        return;
+      }
+      next.when(
+        data: (config) => debugPrint(
+          '[Monetization] Stream config: monetizationEnabled=${config.monetizationEnabled}',
+        ),
+        error: (error, _) => debugPrint('[Monetization] Stream config error: $error'),
+        loading: () {},
+      );
+    });
+
     ref.listen(authStateProvider, (previous, next) {
       if (previous?.value != next.value) {
         _router.refresh();
       }
     });
 
-    return PushNotificationListener(
-      child: MaterialApp.router(
-        title: 'Picksy',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.dark,
-        routerConfig: _router,
+    return PaywallListener(
+      child: PushNotificationListener(
+        child: MaterialApp.router(
+          title: 'Picksy',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.dark,
+          routerConfig: _router,
+        ),
       ),
     );
   }

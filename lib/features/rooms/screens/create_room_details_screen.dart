@@ -90,8 +90,8 @@ class _CreateRoomDetailsScreenState extends ConsumerState<CreateRoomDetailsScree
         : ref.watch(roomStreamProvider(editingRoomId));
     final setupNotifier = ref.read(roomSetupProvider.notifier);
     final isLoading = actionState.isLoading;
-    final errorMessage =
-        setupState.errorMessage ?? actionState.error?.toString();
+    final errorMessage = setupState.errorMessage ??
+        (actionState.hasError ? actionState.error.toString() : null);
 
     if (_roomNameController.text != setupState.roomName &&
         !(_roomNameFocus.hasFocus)) {

@@ -18,6 +18,8 @@ abstract final class AppRoutes {
 
   static String roomSwipe(String roomId) => '/rooms/$roomId/swipe';
 
+  static const paywall = '/paywall';
+
   static const matchDetailsPattern = '/matches/:roomId/:itemId';
 
   static String matchDetails(String roomId, String itemId) =>

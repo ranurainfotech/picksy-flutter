@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../auth/models/app_user.dart';
+import '../../subscription/repositories/entitlements_repository.dart';
 
 class UsernameTakenException implements Exception {
   const UsernameTakenException();
@@ -54,6 +55,9 @@ class UserRepository {
       final userJson = user.toJson()
         ..['createdAt'] = FieldValue.serverTimestamp()
         ..['lastSeen'] = FieldValue.serverTimestamp();
+
+      final entitlementsRepo = EntitlementsRepository(_firestore);
+      userJson.addAll(entitlementsRepo.defaultUserMonetizationFields());
 
       transaction
         ..set(usernameRef, {'uid': uid})

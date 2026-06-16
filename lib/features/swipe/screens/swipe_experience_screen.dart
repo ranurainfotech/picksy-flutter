@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_design_system.dart';
 import '../../../routes/app_routes.dart';
 import '../../movies/domain/entities/movie.dart';
+import '../../monetization/providers/monetization_ad_provider.dart';
+import '../../monetization/services/interstitial_ad_service.dart';
 import '../../places/domain/entities/place.dart';
 import '../../places/places_load_errors.dart';
 import '../../rooms/providers/rooms_provider.dart';
@@ -44,6 +48,7 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
   MatchOverlayData? _activeMatchOverlay;
   bool _isAnimatingOut = false;
   bool _seededMatchIds = false;
+  bool _matchAdShownThisSession = false;
 
   bool get _isMatchOverlayVisible => _activeMatchOverlay != null;
 
@@ -90,7 +95,7 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
             MatchOverlayWidget(
               key: ValueKey(_activeMatchOverlay!.match.matchKey),
               data: _activeMatchOverlay!,
-              onDismiss: _dismissMatchOverlay,
+              onDismiss: () => unawaited(_onMatchOverlayDismissed()),
               onAddToWatchlist: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -627,6 +632,20 @@ class _SwipeExperienceScreenState extends ConsumerState<SwipeExperienceScreen> {
       return;
     }
     _matchOverlayQueue.add(data);
+  }
+
+  Future<void> _onMatchOverlayDismissed() async {
+    if (!_matchAdShownThisSession) {
+      _matchAdShownThisSession = true;
+      await ref
+          .read(monetizationAdCoordinatorProvider)
+          .show(AdTrigger.matchCompleted);
+    }
+
+    if (!mounted) {
+      return;
+    }
+    _dismissMatchOverlay();
   }
 
   void _dismissMatchOverlay() {

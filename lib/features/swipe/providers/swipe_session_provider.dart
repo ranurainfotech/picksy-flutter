@@ -15,6 +15,8 @@ import '../../movies/presentation/providers/movies_providers.dart';
 import '../../places/domain/entities/place.dart';
 import '../../places/places_load_errors.dart';
 import '../../places/presentation/providers/places_providers.dart';
+import '../../subscription/exceptions/monetization_exceptions.dart';
+import '../../subscription/providers/monetization_guard_provider.dart';
 import '../../rooms/models/room_filters.dart';
 import '../../rooms/providers/room_repository_provider.dart';
 import '../../../core/services/analytics/swipe_submit_outcome.dart';
@@ -719,6 +721,12 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
     final queueIndex = current.queueIds.indexOf(movie.id);
     final nextIndex = queueIndex < 0 ? current.currentIndex + 1 : queueIndex + 1;
 
+    try {
+      await ref.read(monetizationGuardProvider).assertCanSwipe();
+    } on MonetizationLimitException {
+      return;
+    }
+
     final nextLocalIndex = current.currentIndex + 1;
     state = AsyncData(
       current.copyWith(
@@ -749,6 +757,13 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
       return;
     }
 
+    try {
+      await ref.read(monetizationGuardProvider).recordSwipe();
+    } on MonetizationLimitException {
+      state = AsyncData(current);
+      return;
+    }
+
     await _afterSwipeSubmitted(current, movie.id, decision, outcome);
   }
 
@@ -765,6 +780,12 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
     final queueIndex = current.placeQueueIds.indexOf(place.placeId);
     final nextIndex =
         queueIndex < 0 ? current.currentIndex + 1 : queueIndex + 1;
+
+    try {
+      await ref.read(monetizationGuardProvider).assertCanSwipe();
+    } on MonetizationLimitException {
+      return;
+    }
 
     final nextLocalIndex = current.currentIndex + 1;
     state = AsyncData(
@@ -794,6 +815,13 @@ class SwipeSessionNotifier extends AsyncNotifier<SwipeSessionState> {
               fatal: false,
             ),
       );
+      return;
+    }
+
+    try {
+      await ref.read(monetizationGuardProvider).recordSwipe();
+    } on MonetizationLimitException {
+      state = AsyncData(current);
       return;
     }
 

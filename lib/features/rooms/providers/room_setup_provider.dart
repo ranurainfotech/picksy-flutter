@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/analytics_provider.dart';
@@ -7,7 +9,11 @@ import '../../../core/services/analytics/analytics_helpers.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../places/constants/restaurant_filter_limits.dart';
 import '../../places/domain/entities/location_suggestion.dart';
+import '../../monetization/providers/monetization_ad_provider.dart';
+import '../../monetization/services/interstitial_ad_service.dart';
 import '../../places/presentation/providers/places_providers.dart';
+import '../../subscription/exceptions/monetization_exceptions.dart';
+import '../../subscription/providers/monetization_guard_provider.dart';
 import '../models/room.dart';
 import '../models/room_filters.dart';
 import 'create_join_room_provider.dart';
@@ -439,7 +445,7 @@ class RoomSetupNotifier extends Notifier<RoomSetupState> {
 }
 
 final createRoomSetupActionProvider =
-    AsyncNotifierProvider.autoDispose<CreateRoomSetupActionNotifier, void>(
+    AsyncNotifierProvider<CreateRoomSetupActionNotifier, void>(
       CreateRoomSetupActionNotifier.new,
     );
 
@@ -457,7 +463,17 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
     state = const AsyncLoading();
 
     try {
+      if (kDebugMode) {
+        debugPrint('[RoomSetup] createRoom started');
+      }
+
       final uid = _requireUid();
+      await ref.read(monetizationGuardProvider).assertCanCreateRoom();
+
+      if (kDebugMode) {
+        debugPrint('[RoomSetup] monetization check passed');
+      }
+
       final formState = ref.read(roomSetupProvider);
       final mood = roomMoodOptions.firstWhere(
         (option) => option.label == formState.selectedMood,
@@ -478,6 +494,10 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
 
       final roomId = await ref.read(roomRepositoryProvider).createRoom(room: room);
 
+      if (kDebugMode) {
+        debugPrint('[RoomSetup] room created: $roomId');
+      }
+
       unawaited(
         ref.read(analyticsServiceProvider).logRoomCreated(
               genreCount: formState.isRestaurant
@@ -493,8 +513,16 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
       );
 
       state = const AsyncData(null);
+      await ref.read(monetizationAdCoordinatorProvider).show(AdTrigger.roomCreated);
       return roomId;
+    } on MonetizationLimitException {
+      state = const AsyncData(null);
+      return null;
     } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('[RoomSetup] createRoom failed: $error');
+        debugPrint('$stackTrace');
+      }
       state = AsyncError(_friendlyError(error), stackTrace);
       return null;
     }
@@ -531,6 +559,9 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
       }
 
       state = const AsyncData(null);
+      await ref
+          .read(monetizationAdCoordinatorProvider)
+          .show(AdTrigger.roomSettingsSaved);
       return true;
     } catch (error, stackTrace) {
       state = AsyncError('Could not update room details. Try again.', stackTrace);
@@ -553,6 +584,15 @@ class CreateRoomSetupActionNotifier extends AsyncNotifier<void> {
   String _friendlyError(Object error) {
     if (error is RoomSetupException) {
       return error.message;
+    }
+
+    if (error is FirebaseException) {
+      return switch (error.code) {
+        'permission-denied' =>
+          'Could not create the room. Check your connection and try again.',
+        'unavailable' => 'Picksy is offline right now. Try again in a moment.',
+        _ => 'Could not create the room. Try again.',
+      };
     }
 
     return 'Could not create the room. Try again.';
